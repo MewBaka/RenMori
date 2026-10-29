@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "renmori"
+version = "0.0.1"
+description = "Full-data protection for commercial Ren'Py games (open-core framework)."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "Apache-2.0"
+authors = [{ name = "MewBaka" }]
+
+# NOTE: `cryptography` is a dependency of the BUILD TOOL only (our dev/CI
+# environment). The runtime that ships inside a protected game uses the native
+# module and does NOT depend on any pip package, because Ren'Py's bundled Python
+# does not include one. The pure-Python reader in this package is a reference
+# implementation for the baseline format and for tests.
+dependencies = [
+    "cryptography>=42",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+renmori = "renmori.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

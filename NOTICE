@@ -1,0 +1,67 @@
+renmori
+Copyright (c) 2026 MewBaka
+
+This product includes software developed by third parties. The open-source
+components of renmori are distributed under the license in the LICENSE file.
+The closed-source binary plugin and the runtime that ships inside protected
+games are governed by a separate commercial EULA (not included in this
+repository).
+
+This NOTICE file lists third-party components and the license obligations that
+attach to them. It is maintained as dependencies are added; entries marked
+PLANNED are expected but not yet integrated.
+
+================================================================================
+Third-party components
+================================================================================
+
+Ren'Py
+------------------------------------------------------------------------
+  Role:     Target engine. renmori protects games built with Ren'Py and
+            repacks the engine runtime. renmori is not affiliated with or
+            endorsed by the Ren'Py project.
+  License:  Ren'Py is distributed under a liberal (MIT-like) license, with
+            some bundled components under their own terms (LGPL, etc.).
+  Action:   Preserve Ren'Py's own license and notices when repacking the
+            engine into a protected distribution.
+  URL:      https://www.renpy.org/
+
+FFmpeg                                                              [LANDMINE]
+------------------------------------------------------------------------
+  Role:     Video/audio decoding, as bundled by Ren'Py. renmori feeds it
+            decrypted streams through the loader; it does not modify FFmpeg.
+  License:  LGPL-2.1+ (some builds/configurations are GPL).
+  Action:   COMPLIANCE-CRITICAL. LGPL requires that the end user be able to
+            replace the FFmpeg library. Our protection must not break that
+            relinking ability for FFmpeg specifically, and we must not
+            statically bind FFmpeg into a form that defeats LGPL relinking.
+            Verify the license of the exact FFmpeg build shipped. Carry
+            FFmpeg's license text and source-offer as required.
+  URL:      https://ffmpeg.org/legal.html
+
+AES / cryptographic primitives                                       [PLANNED]
+------------------------------------------------------------------------
+  Role:     Symmetric encryption (AES, AES-NI) in the native runtime and the
+            build tool.
+  License:  TBD by chosen library (e.g. a permissively licensed crypto crate
+            or library). Record the exact library and license here once fixed.
+  Action:   Confirm the license permits redistribution inside shipped games.
+
+obfuscator-LLVM (build toolchain)                                    [PLANNED]
+------------------------------------------------------------------------
+  Role:     Compile-time native code obfuscation of the closed binary.
+  License:  Derived from LLVM (Apache-2.0 with LLVM exceptions) in most forks;
+            confirm the specific fork's terms.
+  Note:     Used as a build toolchain; does not itself ship to end users. Still
+            record its terms for the build pipeline.
+  URL:      https://github.com/obfuscator-llvm/obfuscator
+
+================================================================================
+When adding a dependency
+================================================================================
+
+1. Add an entry here with role, license, and any redistribution obligation.
+2. Pay special attention to anything (L)GPL: it must not conflict with shipping
+   the closed runtime inside customer games, and relinking rights must be
+   preserved where required.
+3. Keep the dependency's own LICENSE/NOTICE text alongside the distribution.
