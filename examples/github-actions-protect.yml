@@ -1,0 +1,50 @@
+# Example GitHub Actions workflow: build a Ren'Py game, protect it with renmori,
+# verify the result, and upload the protected build as an artifact.
+#
+# Copy to .github/workflows/protect.yml and adapt the build step to your project.
+# renmori runs on the CI runner (the build environment); the protected runtime
+# ships inside the game and needs no Python there.
+
+name: Protect Ren'Py build
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  protect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install renmori
+        run: pip install renmori
+
+      # Replace this with your real Ren'Py build. It must produce a directory
+      # that contains a game/ subdirectory, e.g. dist/MyGame-1.0-pc.
+      - name: Build the game
+        run: |
+          # renpy.sh "$PWD" distribute   # or your existing build script
+          echo "produce ./dist/MyGame-pc here"
+
+      - name: Protect
+        env:
+          # Optional: manage keys yourself via secrets. Omit both to let renmori
+          # generate a fresh random key per build (recommended for most teams).
+          RENMORI_MASTER_KEY: ${{ secrets.RENMORI_MASTER_KEY }}
+          RENMORI_SCRIPT_KEY: ${{ secrets.RENMORI_SCRIPT_KEY }}
+        run: |
+          renmori protect ./dist/MyGame-pc -o ./dist/MyGame-pc-protected --quiet
+
+      - name: Verify
+        run: renmori verify ./dist/MyGame-pc-protected
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MyGame-pc-protected
+          path: ./dist/MyGame-pc-protected
