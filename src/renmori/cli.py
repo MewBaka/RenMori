@@ -28,7 +28,9 @@ import os
 import pathlib
 import re
 import shutil
+import subprocess
 import sys
+import tempfile
 import time
 import unicodedata
 import zipfile
@@ -55,6 +57,9 @@ DEFAULT_KEEP_ON_DISK = ["steam_appid.txt"]
 
 SUPPORTED_STRENGTHS = {"baseline"}
 
+# Highest plugin-interface version this tool speaks (see docs/interface.md).
+PLUGIN_INTERFACE = 1
+
 EXIT_OK = 0
 EXIT_RUNTIME = 1
 EXIT_USAGE = 2
@@ -70,6 +75,8 @@ _LANG = "en"
 
 _MESSAGES = {
     "about_to_protect": {"en": "About to protect", "zh": "即将保护"},
+    "strength":         {"en": "Strength", "zh": "强度"},
+    "auto":             {"en": "auto", "zh": "自动"},
     "input":            {"en": "Input",    "zh": "输入"},
     "mode":             {"en": "Mode",     "zh": "模式"},
     "files":            {"en": "Files",    "zh": "文件"},
@@ -280,7 +287,14 @@ def main(argv=None):
     p.add_argument("--chunk-size", type=int, default=None, help="container chunk size in bytes")
     p.add_argument("--exclude", action="append", default=[], metavar="GLOB",
                    help="glob of game-relative paths to leave unencrypted (repeatable)")
-    p.add_argument("--strength", default=None, help="protection strength (open tool: 'baseline')")
+    p.add_argument("--strength", default=None,
+                   help="protection strength (default: auto — the plugin's strongest, else 'baseline')")
+    p.add_argument("--plugin", default=None,
+                   help="path to the closed protection plugin (else $RENMORI_PLUGIN)")
+    p.add_argument("--platforms", default=None,
+                   help="plugin only: comma list of target platforms (default: auto-detect)")
+    p.add_argument("--launcher", action="store_true",
+                   help="plugin only: bind keys to a native launcher and ship it")
     p.add_argument("--no-lockdown", dest="lockdown", action="store_false", default=None,
                    help="do not disable console/developer/export in the build")
     p.add_argument("--keep-plaintext", action="store_true", help="don't delete packed originals (debug)")
@@ -354,11 +368,16 @@ def _resolve_config(args, src_root):
     settings = {
         "chunk_size": args.chunk_size or file_cfg.get("chunk_size", DEFAULT_CHUNK_SIZE),
         "exclude": excludes,
-        "strength": args.strength or file_cfg.get("strength", "baseline"),
+        # None means "auto": the strongest the plugin offers, else baseline.
+        "strength": args.strength or file_cfg.get("strength") or None,
         "lockdown": args.lockdown if args.lockdown is not None else file_cfg.get("lockdown", True),
         "keep_plaintext": args.keep_plaintext or file_cfg.get("keep_plaintext", False),
         "master_env": keys.get("master_env"),
         "script_env": keys.get("script_env"),
+        "platforms": (
+            [p.strip() for p in args.platforms.split(",") if p.strip()] if args.platforms
+            else file_cfg.get("platforms") or None),
+        "launcher": bool(getattr(args, "launcher", False)) or bool(file_cfg.get("launcher", False)),
     }
     return settings
 
@@ -403,9 +422,19 @@ def cmd_protect(args):
     except RuntimeError as e:
         return _fail(str(e))
 
-    if settings["strength"] not in SUPPORTED_STRENGTHS:
-        return _fail("strength %r requires the closed renmori plugin; open tool supports 'baseline'"
-                     % settings["strength"])
+    # Discover the closed plugin and settle the strength. `strength` None means
+    # auto: the plugin's strongest offering, else the baseline.
+    plugin_path = _find_plugin(args)
+    caps = _query_capabilities(plugin_path) if plugin_path else None
+    plugin_strengths = caps.get("strengths", []) if caps else []
+    strength = settings["strength"] or (plugin_strengths[0] if plugin_strengths else "baseline")
+    settings["strength"] = strength
+
+    if strength != "baseline":
+        if strength not in plugin_strengths:
+            return _fail("strength %r requires the closed renmori plugin; set RENMORI_PLUGIN "
+                         "or pass --plugin (the open tool alone supports 'baseline')" % strength)
+        return _protect_with_plugin(args, plugin_path, caps, src_root, settings, started)
 
     try:
         master_key, master_src = _key_from_env(settings["master_env"])
@@ -541,6 +570,189 @@ def _release_hints(out_root):
     _log("    4. " + _t("hint_ship"))
     _log("       " + _yellow(_t("hint_norebuild")))
     _log()
+
+
+# --- closed-plugin integration (see docs/interface.md) --------------------
+
+def _find_plugin(args):
+    path = args.plugin or os.environ.get("RENMORI_PLUGIN")
+    if not path:
+        return None
+    path = os.path.abspath(os.path.expanduser(path))
+    if not os.path.exists(path):
+        _note("plugin not found, ignoring: %s" % path)
+        return None
+    return path
+
+
+def _plugin_base_cmd(plugin_path):
+    # A .py plugin runs under this interpreter; anything else runs directly.
+    if plugin_path.endswith(".py"):
+        return [sys.executable, plugin_path]
+    return [plugin_path]
+
+
+def _query_capabilities(plugin_path):
+    try:
+        proc = subprocess.run(_plugin_base_cmd(plugin_path) + ["capabilities"],
+                              stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                              text=True, timeout=30)
+        if proc.returncode != 0:
+            return None
+        caps = json.loads(proc.stdout)
+    except Exception:  # noqa: BLE001 - a broken plugin is treated as absent
+        return None
+    if not isinstance(caps.get("interface"), int) or caps["interface"] < PLUGIN_INTERFACE:
+        _note("plugin interface %r unsupported (need %d); ignoring it"
+              % (caps.get("interface"), PLUGIN_INTERFACE))
+        return None
+    return caps
+
+
+def _run_plugin_protect(plugin_path, request):
+    # stdout carries the JSON response; the plugin's progress streams to stderr.
+    proc = subprocess.run(_plugin_base_cmd(plugin_path) + ["protect"],
+                          input=json.dumps(request), text=True, stdout=subprocess.PIPE)
+    resp = None
+    if proc.stdout and proc.stdout.strip():
+        try:
+            resp = json.loads(proc.stdout.strip().splitlines()[-1])
+        except Exception:  # noqa: BLE001
+            resp = None
+    return proc.returncode, resp
+
+
+def _protect_with_plugin(args, plugin_path, caps, src_root, settings, started):
+    game_dir = src_root / "game"
+    to_pack, excluded = _partition(game_dir, settings["exclude"])
+    if not to_pack:
+        return _fail("nothing to pack under %s" % game_dir)
+    script_total = sum(1 for _, rel in to_pack if rel.lower().endswith(SCRIPT_EXTENSIONS))
+
+    # The plugin always reads `source` and writes a fresh `out_root`. In-place is
+    # "move the original aside, then protect into its old path".
+    backup_root = None
+    restore = None  # (moved_to, original) to undo if the plugin fails
+    if args.output:
+        out_root = pathlib.Path(args.output).resolve()
+        if out_root.exists():
+            return _fail("output %s already exists" % out_root)
+        source = src_root
+        mode = _t("mode_copy", out=out_root)
+    else:
+        out_root = src_root
+        if not args.no_backup:
+            backup_root = src_root.parent / (src_root.name + "_bak")
+            if backup_root.exists():
+                return _fail("backup %s already exists; remove it, pass --no-backup, or use -o"
+                             % backup_root)
+            source = backup_root
+            mode = _t("mode_inplace", bak=backup_root)
+        else:
+            source = src_root.parent / ("." + src_root.name + ".renmori-src." + os.urandom(4).hex())
+            mode = _t("mode_inplace_nobak")
+
+    platforms_label = ",".join(settings["platforms"]) if settings["platforms"] else _t("auto")
+    _log(_panel(_t("about_to_protect"), [
+        (_t("input"), src_root),
+        (_t("mode"), mode),
+        (_t("strength"), "%s · %s %s" % (settings["strength"], caps.get("name", "plugin"),
+                                         caps.get("version", ""))),
+        (_t("files"), _t("files_val", n=len(to_pack), k=len(excluded))),
+        (_t("scripts"), _t("scripts_val", n=script_total)),
+        ("Platforms", platforms_label),
+        (_t("lockdown"), _t("lockdown_on") if settings["lockdown"] else _t("lockdown_off")),
+    ]))
+    _log()
+    if not args.output:
+        _log("  " + _yellow("⚠  ") + _t("warn_delete"))
+        _log("     " + (_t("warn_backup", bak=backup_root) if backup_root else _t("warn_nobak")))
+        _log()
+    if not _confirm(args):
+        _log("  " + _t("aborted"))
+        print(json.dumps({"status": "aborted"}))
+        return EXIT_USAGE
+
+    # Move the original aside for in-place, so the plugin writes a fresh tree.
+    if out_root == src_root:
+        shutil.move(str(src_root), str(source))
+        restore = (source, src_root)
+
+    request = {
+        "interface": PLUGIN_INTERFACE,
+        "source_dir": str(source),
+        "output_dir": str(out_root),
+        "strength": settings["strength"],
+        "platforms": settings["platforms"],
+        "launcher": bool(settings["launcher"]),
+        "exclude": settings["exclude"],
+        "chunk_size": settings["chunk_size"],
+        "lockdown": bool(settings["lockdown"]),
+        "keys": {},
+    }
+    rc, resp = _run_plugin_protect(plugin_path, request)
+
+    if rc != 0 or not isinstance(resp, dict) or resp.get("status") != "ok":
+        # Restore the original and clean any partial output.
+        if restore is not None:
+            moved_to, original = restore
+            if original.exists():
+                shutil.rmtree(original, ignore_errors=True)
+            if moved_to.exists():
+                shutil.move(str(moved_to), str(original))
+        elif args.output and out_root.exists():
+            shutil.rmtree(out_root, ignore_errors=True)
+        msg = resp.get("message") if isinstance(resp, dict) else None
+        return _fail("plugin protection failed" + (": " + msg if msg else ""), EXIT_RUNTIME)
+
+    # In-place no-backup: the temporary original copy was consumed; drop it.
+    if restore is not None and backup_root is None:
+        shutil.rmtree(restore[0], ignore_errors=True)
+
+    manifest = _write_plugin_manifest(out_root, resp, settings)
+    _step(_t("step_pack", n=resp.get("files", 0),
+             size="sha256 %s…" % (resp.get("container_sha256") or "")[:12],
+             name=resp.get("container", CONTAINER_NAME)))
+    _step(_t("step_scripts", n=resp.get("scripts", 0)))
+
+    rows = [(_t("output"), out_root)]
+    if backup_root is not None:
+        rows.append((_t("backup"), backup_root))
+    rows.append((_t("strength"), settings["strength"]))
+    rows.append((_t("container"), "sha256 %s…" % (resp.get("container_sha256") or "")[:12]))
+    rows.append((_t("files"), _t("files_done", n=resp.get("files", 0), s=resp.get("scripts", 0))))
+    _log()
+    _log(_panel(_t("protected"), rows, tint=_green))
+    _log()
+    if not args.no_hints:
+        _release_hints(out_root)
+    _log("  " + _green("✓ ") + _t("done", t="%.1f" % (time.monotonic() - started)))
+
+    result = {"status": "ok", "output": str(out_root), "manifest": manifest}
+    if backup_root is not None:
+        result["backup"] = str(backup_root)
+    print(json.dumps(result))
+    return EXIT_OK
+
+
+def _write_plugin_manifest(out_root, resp, settings):
+    manifest = {
+        "renmori_version": __version__,
+        "container_format": "poly",
+        "strength": resp.get("strength", settings["strength"]),
+        "lockdown": bool(settings["lockdown"]),
+        "container": resp.get("container"),
+        "container_sha256": resp.get("container_sha256"),
+        "file_count": resp.get("files", 0),
+        "script_count": resp.get("scripts", 0),
+        "platforms": resp.get("platforms", []),
+        "cores": resp.get("cores", []),
+        "launcher": resp.get("launcher"),
+    }
+    (out_root / MANIFEST_NAME).write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    return {"file_count": resp.get("files", 0),
+            "container_sha256": resp.get("container_sha256"),
+            "strength": resp.get("strength", settings["strength"])}
 
 
 def _excluded(rel_name, patterns):
