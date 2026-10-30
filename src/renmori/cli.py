@@ -141,6 +141,8 @@ _MESSAGES = {
     "step_pack":        {"en": "Packed {n} files ({size}) -> {name}",
                          "zh": "已打包 {n} 个文件({size})-> {name}"},
     "step_scripts":     {"en": "Transformed {n} scripts", "zh": "已变换 {n} 个脚本"},
+    "step_stripped":    {"en": "Stripped {n} source file(s) (.rpy); the engine runs the .rpyc",
+                         "zh": "已剥离 {n} 个源码文件(.rpy);引擎用 .rpyc 运行"},
     "step_remove":      {"en": "Removed plaintext originals", "zh": "已删除明文原件"},
     "step_ext":         {"en": "Wrote loader extension {name}", "zh": "已写入加载扩展 {name}"},
     "step_manifest":    {"en": "Wrote {name}", "zh": "已写入 {name}"},
@@ -590,6 +592,7 @@ def _do_protect(args, started):
 
     # Walk the source to show counts (the copy, if any, is identical).
     to_pack, excluded = _partition(game_dir, settings["exclude"])
+    to_pack, _dropped = _strip_source(to_pack)
     if not to_pack:
         return _fail("nothing to pack under %s" % game_dir)
     script_total = sum(1 for _, rel in to_pack if rel.lower().endswith(SCRIPT_EXTENSIONS))
@@ -636,6 +639,7 @@ def _do_protect(args, started):
 
     out_game = out_root / "game"
     to_pack, excluded = _partition(out_game, settings["exclude"])
+    to_pack, dropped_src = _strip_source(to_pack)
 
     container_path = out_game / CONTAINER_NAME
     manifest_files = []
@@ -679,8 +683,11 @@ def _do_protect(args, started):
     _step(_t("step_pack", n=len(manifest_files), size=_human(container_bytes), name=CONTAINER_NAME))
     _step(_t("step_scripts", n=script_count))
 
+    if dropped_src:
+        _step(_t("step_stripped", n=len(dropped_src)))
     if not settings["keep_plaintext"]:
-        _remove_packed(out_game, to_pack)
+        # Delete both the packed originals and the stripped source.
+        _remove_packed(out_game, to_pack + dropped_src)
         _step(_t("step_remove"))
 
     _write_extension(out_game / EXTENSION_NAME, master_key, script_key, settings["lockdown"])
@@ -1074,6 +1081,22 @@ def _partition(game_dir, excludes):
             rel_name = normalize_name(os.path.relpath(abs_path, game_dir))
             (excluded if _excluded(rel_name, excludes) else to_pack).append((abs_path, rel_name))
     return to_pack, excluded
+
+
+def _strip_source(to_pack):
+    """Split off Ren'Py source (.rpy/.rpym) that has a compiled sibling. Source is
+    not needed at run time — the engine runs the .rpyc — and shipping it (even
+    packed) would hand back pristine source on any decrypt, no decompilation
+    needed. Source with no compiled form is kept so no content is lost.
+    Returns (kept, dropped); dropped files are deleted, not packed."""
+    names = {rel for _, rel in to_pack}
+    kept, dropped = [], []
+    for abs_path, rel in to_pack:
+        low = rel.lower()
+        compiled = (rel[:-4] + ".rpyc") if low.endswith(".rpy") else \
+                   (rel[:-5] + ".rpymc") if low.endswith(".rpym") else None
+        (dropped if (compiled and compiled in names) else kept).append((abs_path, rel))
+    return kept, dropped
 
 
 def _remove_packed(game_dir, to_pack):

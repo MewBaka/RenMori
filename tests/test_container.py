@@ -56,6 +56,33 @@ def _pack(tmp_path, entries, chunk_size=64 * 1024):
     return path
 
 
+def test_no_gcm_nonce_reuse(tmp_path):
+    # Catastrophic-failure guard: AES-GCM must never reuse a (key, nonce). Pack
+    # many files — including identical content and identical sizes — then recompute
+    # every (file_key, chunk_nonce) pair from the index and assert all are unique.
+    # This would catch a regression that made file_id deterministic/constant or
+    # dropped the chunk index from the nonce.
+    from renmori.container import format as fmt
+
+    entries = {}
+    for i in range(60):
+        entries["dup/%d.bin" % i] = b"identical content block" * 9000   # same bytes
+        entries["rnd/%d.bin" % i] = os.urandom(64 * 1024 * 3 + 7)       # multi-chunk
+    path = _pack(tmp_path, entries, chunk_size=64 * 1024)
+    r = ContainerReader(path, KEY)
+
+    seen = set()
+    for name, (offset, size, file_id) in r._files.items():
+        key = fmt.file_key(KEY, r.header.container_id, file_id)
+        for i in range(fmt.chunk_count(size, r.header.chunk_size)):
+            pair = (key, fmt.chunk_nonce(file_id, i))
+            assert pair not in seen, "GCM nonce reuse at %s chunk %d" % (name, i)
+            seen.add(pair)
+    # every file got a distinct file_id — the randomness that makes keys per-file
+    ids = [fid for _, _, fid in r._files.values()]
+    assert len(set(ids)) == len(ids)
+
+
 @pytest.mark.parametrize("backend", _backends(), ids=lambda b: b.name)
 def test_round_trip(tmp_path, backend):
     entries = {

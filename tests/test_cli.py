@@ -342,6 +342,25 @@ def test_verify_flags_plaintext_bytecode_in_cache(tmp_path, capsys):
     assert rc == 1 and any("plaintext left" in p for p in res["problems"])
 
 
+def test_rpy_source_is_stripped_not_shipped(tmp_path, capsys):
+    # source with a compiled sibling must not ship (not packed, not on disk);
+    # source with no .rpyc is kept so nothing is lost
+    src = make_game(tmp_path / "g", {
+        "script.rpy": b'label start:\n    "secret source line"\n',
+        "script.rpyc": b"compiled",
+        "orphan.rpy": b"lonely source, no compiled form",
+        "a.png": b"img",
+    })
+    out = tmp_path / "p"
+    rc, res = run(["protect", str(src), "-o", str(out)], capsys)
+    assert rc == 0
+    names = {e["name"] for e in json.loads((out / "renmori-manifest.json").read_text())["files"]}
+    assert "script.rpy" not in names and not (out / "game" / "script.rpy").exists()
+    assert "script.rpyc" in names
+    assert "orphan.rpy" in names and not (out / "game" / "orphan.rpy").exists()
+    assert run(["verify", str(out)], capsys)[0] == 0
+
+
 def test_default_strength_requires_plugin(tmp_path, monkeypatch):
     # default is full protection; with no plugin (and downloads off) it fails
     # rather than silently shipping the weak baseline
