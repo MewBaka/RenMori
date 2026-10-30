@@ -12,18 +12,23 @@ output of the Ren'Py launcher's *Build Distributions*.
 
 ## Install
 
-Not on PyPI yet (version `0.0.1`). Install from source:
-
 ```bash
-git clone <this-repo> renmori
-cd renmori
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -e .
+pip install renmori
 renmori --version
 ```
 
 Requires Python 3.9+ (reading a `renmori.toml` config needs 3.11+, or the
-`tomli` package on older versions).
+`tomli` package on older versions). The first full protect auto-downloads the
+closed plugin for your platform; see "Baseline and full protection" below.
+
+To hack on it, install from source instead:
+
+```bash
+git clone https://github.com/MewBaka/RenMori.git
+cd RenMori
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -e .
+```
 
 ---
 

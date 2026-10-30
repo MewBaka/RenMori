@@ -12,17 +12,21 @@ English version: [usage.md](usage.md)
 
 ## 安装
 
-尚未发布到 PyPI（版本 `0.0.1`），从源码安装：
-
 ```bash
-git clone <this-repo> renmori
-cd renmori
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -e .
+pip install renmori
 renmori --version
 ```
 
-需要 Python 3.9+（读取 `renmori.toml` 配置需要 3.11+，或在更低版本上安装 `tomli` 包）。
+需要 Python 3.9+（读取 `renmori.toml` 配置需要 3.11+，或在更低版本上安装 `tomli` 包）。首次完整保护时会自动下载对应平台的闭源插件，见下文「基线保护与完整保护」。
+
+想改源码则从源码安装：
+
+```bash
+git clone https://github.com/MewBaka/RenMori.git
+cd RenMori
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -e .
+```
 
 ---
 

@@ -1,0 +1,47 @@
+name: publish-pypi
+
+# Publish the `renmori` CLI to PyPI on a version tag (v1.2.3), so users can
+# `pip install renmori`. Uses PyPI Trusted Publishing (OIDC) — no API token or
+# stored secret. One-time setup on PyPI is required; see docs/release-pypi.md.
+#
+#   git tag v1.0.0 && git push origin v1.0.0   # -> builds and publishes
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:   # manual run (builds, and publishes if a tag is checked out)
+
+jobs:
+  build:
+    name: build sdist + wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build and check
+        run: |
+          python -m pip install --upgrade build twine
+          python -m build
+          python -m twine check dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    name: publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    # Only publish for a real tag, never for a manual run off a branch.
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      id-token: write          # OIDC token for Trusted Publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
