@@ -47,11 +47,10 @@ A GCM-encrypted UTF-8 JSON object:
 { "v": 1, "files": { "<name>": [data_offset, size, "<file_id hex>"], … } }
 ```
 
-- `name` — Ren'Py game-relative path, forward slashes, no leading slash
-  (`images/bg.png`).
-- `data_offset` — absolute offset of the file's first encrypted chunk.
-- `size` — plaintext size in bytes.
-- `file_id` — 16 random bytes (hex), unique per file; salts the file key.
+- `name` — Ren'Py game-relative path, forward slashes, no leading slash (`images/bg.png`)
+- `data_offset` — absolute offset of the file's first encrypted chunk
+- `size` — plaintext size in bytes
+- `file_id` — 16 random bytes (hex), unique per file, salting the file key
 
 ### File payload
 
@@ -69,10 +68,8 @@ index_key      = HKDF(ikm=master_key, salt=container_id, info="renmori/v1/index"
 file_key(id)   = HKDF(ikm=master_key, salt=container_id, info="renmori/v1/file/" + id)
 ```
 
-- `master_key` is 32 bytes. Where it comes from at runtime is **not** part of
-  this baseline spec — the open framework takes it as input; the closed
-  key-derivation logic is what hides and reconstructs it in a shipped game.
-- Per-file keys mean a nonce scheme scoped to one key per file.
+- `master_key` is 32 bytes, and where it comes from at runtime is **not** part of this baseline spec — the open framework takes it as input, while the closed key-derivation logic hides and reconstructs it in a shipped game
+- per-file keys scope the nonce scheme to one key per file
 
 ### Nonce (12 bytes) and AAD per chunk
 
@@ -88,17 +85,13 @@ truncated.
 
 ## Security notes (baseline)
 
-- Confidentiality + integrity per chunk via GCM; tamper anywhere fails decryption.
-- The format is **public and fixed** — on its own it is "baseline strength". A
-  universal reader is possible *if* the attacker also has the master key. The
-  real barriers are (a) runtime key derivation (closed) and (b) per-build
-  polymorphism (closed), neither of which is in this file.
-- Not addressed here (by design): memory/screen capture. See
-  [threat-model.md](threat-model.md).
+- confidentiality and integrity per chunk via GCM — tampering anywhere fails decryption
+- the format is **public and fixed**, so on its own it is baseline strength — a universal reader is possible *only if* the attacker also holds the master key; the real barriers are runtime key derivation (closed) and per-build polymorphism (closed), neither of which is in this file
+- out of scope by design — memory or screen capture; see [threat-model.md](threat-model.md)
 
 ## Reference implementation
 
 - Writer: [`src/renmori/container/writer.py`](../src/renmori/container/writer.py)
-- Reader + streaming: [`src/renmori/container/reader.py`](../src/renmori/container/reader.py)
+- Reader and streaming: [`src/renmori/container/reader.py`](../src/renmori/container/reader.py)
 - AES-GCM backends: [`src/renmori/container/crypto.py`](../src/renmori/container/crypto.py)
-- Format constants / key derivation: [`src/renmori/container/format.py`](../src/renmori/container/format.py)
+- Format constants and key derivation: [`src/renmori/container/format.py`](../src/renmori/container/format.py)

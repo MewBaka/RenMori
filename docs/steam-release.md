@@ -1,6 +1,6 @@
 # Releasing a protected build to Steam
 
-renmori protects a **built** Ren'Py distribution. Publishing to Steam is three
+RenMori protects a **built** Ren'Py distribution build. Publishing to Steam is three
 ordered steps, and the order matters:
 
 ```
@@ -10,7 +10,7 @@ Ren'Py launcher: Build Distributions   →   renmori protect   →   SteamPipe u
 
 > **Do not reverse this.** If you protect first and then re-run the Ren'Py
 > launcher's *Build Distributions* on your project, the launcher rebuilds from
-> source and produces a fresh **unprotected** distribution — your protection is
+> source and produces a fresh **unprotected** distribution build — your protection is
 > gone. Protect the launcher's output, and never feed a protected folder back
 > into the launcher.
 
@@ -32,10 +32,10 @@ Both patterns work on Steam:
 
 | Pattern | What you do | Trade-off |
 |--------|-------------|-----------|
-| **Market (simple)** | Protect the one market folder; put it in **one depot** mounted on all OSes; set per-OS launch options. | Every player downloads all three platforms' files. |
-| **Per-platform (tidy)** | Build **pc** and **mac** separately, `renmori protect` each, upload each to its **own depot** (Windows / macOS / Linux). | More steps, but each player only downloads their platform. |
+| **Market (simple)** | Protect the one market folder; put it in **one depot** mounted on all OSes; set per-OS launch options | Every player downloads all three platforms' files |
+| **Per-platform (tidy)** | Build **pc** and **mac** separately, `renmori protect` each, upload each to its **own depot** (Windows / macOS / Linux) | More steps, but each player only downloads their platform |
 
-renmori's protection is platform-agnostic — the `renmori.rpe` loader runs inside
+RenMori's protection is platform-agnostic — the `renmori.rpe` loader runs inside
 Ren'Py's own bundled Python on each OS — so **one `protect` run on the market
 build covers Windows, macOS, and Linux at once**.
 
@@ -43,7 +43,7 @@ build covers Windows, macOS, and Linux at once**.
 
 ## Step 1 — Protect
 
-Unzip the launcher's market archive to a folder (renmori takes a directory, not
+Unzip the launcher's market archive to a folder (RenMori takes a directory, not
 a `.zip`), then:
 
 ```bash
@@ -78,10 +78,10 @@ The plaintext `.rpa`/`.rpyc` that were under `game/` are gone; `unrpa` and
 Steam does **not** take a single file. A build is the **contents of a folder**,
 uploaded to a depot with SteamPipe. So:
 
-- **Do not** upload the `.zip`.
-- **Do not** upload only `renmori.rmc`.
+- **Do not** upload the `.zip`
+- **Do not** upload only `renmori.rmc`
 - **Do** point the depot's `contentroot` at the **protected folder** and let
-  SteamPipe upload everything in it (`game/`, `lib/`, `renpy/`, the launchers).
+  SteamPipe upload everything in it (`game/`, `lib/`, `renpy/`, the launchers)
 
 `app_build_<APPID>.vdf`:
 
@@ -133,18 +133,18 @@ in memory. Players notice nothing.
 
 ## Steam specifics
 
-- **Don't double-wrap with Steam DRM** (the DRMToolkit executable wrapper). It
-  rewrites the launcher binary and can conflict with runtime self-checks, and it
-  is weak on its own. renmori already protects the data layer.
-- **The overlay is safe.** renmori only hooks Ren'Py's file loading, never
-  process/DLL injection, so the Steam overlay works normally.
+- **Don't double-wrap with Steam DRM** (the DRMToolkit executable wrapper) — it
+  rewrites the launcher binary, can conflict with runtime self-checks, and is
+  weak on its own, whereas RenMori already protects the data layer
+- **The overlay is safe** — RenMori only hooks Ren'Py's file loading, never
+  process/DLL injection, so the Steam overlay works normally
 - **Achievements and Cloud saves** go through Ren'Py's Python API and are
-  unaffected. `renmori.rmc` is a static file, so Steam's file verification and
-  delta updates work normally.
+  unaffected; `renmori.rmc` is a static file, so Steam's file verification and
+  delta updates work normally
 - **`steam_appid.txt`** is read by the Steam SDK outside `renpy.loader`, so
-  renmori keeps it as plaintext by default (`DEFAULT_KEEP_ON_DISK`). Keeping it
-  in the shipped build is harmless; add any other externally-read files via
-  `keep_on_disk` in `renmori.toml`.
+  RenMori keeps it as plaintext by default (`DEFAULT_KEEP_ON_DISK`) — keeping it
+  in the shipped build is harmless, and any other externally-read files can be
+  added via `keep_on_disk` in `renmori.toml`
 
 ---
 

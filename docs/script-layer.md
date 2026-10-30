@@ -1,30 +1,23 @@
 # Script layer & engine lockdown (M2)
 
 M1 already encrypts every `.rpyc` inside the container, so off-the-shelf tools
-can't reach them on a shipped build. M2 is **defense in depth** for the script
-*source*, for the case where container contents are exposed (a leaked/derived
+cannot reach them on a shipped build. M2 is **defense in depth** for the script
+*source*, for the case where container contents are exposed (a leaked or derived
 container key, or a memory dump), plus **engine hardening** that blocks injected
 decompilers and locks down a release.
 
 ## 1. Script transform (baseline)
 
 Compiled scripts carry their AST as a pickle in the RPYC2 slot payload
-(`zlib(pickle((data, stmts)))`). At build time renmori replaces each pickle
+(`zlib(pickle((data, stmts)))`). At build time RenMori replaces each pickle
 payload with:
 
 ```
 SCRIPT_MAGIC (b"RMSC\x01") || nonce(12) || AES-256-GCM(script_key, pickle)
 ```
 
-- **`script_key` is independent of the container master key.** Exposing the
-  container's contents with the master key alone does *not* yield decompilable
-  scripts — you also need the script key, which lives in the runtime extension
-  (and, in production, in the closed native runtime).
-- Reversible and lossless: the runtime decrypts back to the exact original
-  pickle before Ren'Py unpickles, so AST semantics are untouched. Implemented in
-  [`script/transform.py`](../src/renmori/script/transform.py) (build) and the
-  `renpy.script.loads` patch in [`runtime/hook.py`](../src/renmori/runtime/hook.py)
-  (runtime).
+- **`script_key` is independent of the container master key** — exposing the container's contents with the master key alone does *not* yield decompilable scripts, since you also need the script key, which lives in the runtime extension and, in production, in the closed native runtime
+- reversible and lossless — the runtime decrypts back to the exact original pickle before Ren'Py unpickles, so AST semantics are untouched; implemented in [`script/transform.py`](../src/renmori/script/transform.py) (build) and the `renpy.script.loads` patch in [`runtime/hook.py`](../src/renmori/runtime/hook.py) (runtime)
 
 ### Why this defeats the decompilers
 
@@ -32,10 +25,10 @@ The stored slot payload is no longer a pickle, so a decompiler that extracts it
 sees `SCRIPT_MAGIC || ciphertext`. Verified against the two named tools on the
 same `script.rpyc`:
 
-| Tool | Original `.rpyc` | renmori-transformed |
+| Tool | Original `.rpyc` | RenMori-transformed |
 |------|------------------|---------------------|
 | `unrpyc` | decompiles to `.rpy` | **fails** |
-| `unrpyc --try-harder` | — | **fails** (its zlib/base64/hex/escape layers can't touch AES-GCM) |
+| `unrpyc --try-harder` | — | **fails** (its zlib/base64/hex/escape layers cannot touch AES-GCM) |
 | `rpycdec` | decompiles to `.rpy` | **fails** (`Unsupported file format`) |
 
 ### Closed upgrade: per-build AST structural randomization
@@ -52,7 +45,7 @@ not port. Mechanism and implementation are proprietary — see the private
 ## 2. Injection block (engine layer)
 
 `un.rpyc`-style decompilers work by being dropped into `game/` and loaded as a
-script, whose init code dumps everything. renmori refuses to **open** any
+script, whose init code dumps everything. RenMori refuses to **open** any
 script-like file (`.rpyc/.rpymc/.rpy/.rpym/.rpe`) that physically resolves
 inside the game directory, so an injected file's code never runs. Engine scripts
 under `renpy/common` are unaffected (the guard is scoped to the game dir).

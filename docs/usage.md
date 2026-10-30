@@ -1,12 +1,12 @@
 # CLI usage
 
 The `renmori` command-line tool protects a **built** Ren'Py 8.x (Python 3)
-distribution. It makes no changes to your game's source — you run it on the
+distribution build. It makes no changes to your game's source — you run it on the
 output of the Ren'Py launcher's *Build Distributions*.
 
-- For CI pipelines and key management, see [ci.md](ci.md).
-- For publishing to Steam, see [steam-release.md](steam-release.md).
-- For the config file, see [`examples/renmori.toml`](../examples/renmori.toml).
+- For CI pipelines and key management, see [ci.md](ci.md)
+- For publishing to Steam, see [steam-release.md](steam-release.md)
+- For the config file, see [`examples/renmori.toml`](../examples/renmori.toml)
 
 ---
 
@@ -49,13 +49,13 @@ scripts, deletes the plaintext originals, writes the loader extension
 
 ### `renmori protect <game-dir> [options]`
 
-Protect a built game directory.
+Protect a distribution build directory.
 
 - **In place (default):** overwrites the directory, but first copies the
-  original to a sibling `<dir>_bak`. On an interactive terminal it prints a
-  summary and asks `[y/N]` before touching anything.
+  original to a sibling `<dir>_bak` — on an interactive terminal it prints a
+  summary and asks `[y/N]` before touching anything
 - **To a new directory:** `-o OUTPUT` protects a copy and leaves the original
-  untouched (no backup is made in this mode).
+  untouched (no backup is made in this mode)
 
 ### `renmori verify <protected-dir>`
 
@@ -87,9 +87,9 @@ it as a CI gate.
 
 | Flag | Default | Notes |
 |------|---------|-------|
-| `--lang {auto,en,zh}` | `auto` | language of the human-facing output; `auto` follows the system locale. Also `RENMORI_LANG`. |
-| `--no-color` | off | disable ANSI color. Color is auto-off when not a terminal, and honors `NO_COLOR`. |
-| `--quiet` | off | suppress all styled stderr output; print only the final JSON line. |
+| `--lang {auto,en,zh}` | `auto` | language of the human-facing output; `auto` follows the system locale; also `RENMORI_LANG` |
+| `--no-color` | off | disable ANSI color — auto-off when not a terminal, and honors `NO_COLOR` |
+| `--quiet` | off | suppress all styled stderr output; print only the final JSON line |
 
 ---
 
@@ -174,11 +174,11 @@ python tools/verify_in_renpy.py --sdk /path/to/renpy-8.5.2-sdk --game /path/to/y
 
 | Symptom | Cause / fix |
 |---------|-------------|
-| `has no 'game/' directory` | Point renmori at the build folder that contains `game/`, not at `game/` itself or a `.zip`. |
-| `is already protected` | The target already has `renmori.rmc`. Start from a fresh build (or the `_bak`). |
-| `backup <dir>_bak already exists` | Remove it, or pass `--no-backup`, or use `-o` to protect a copy. |
-| `strength 'x' requires the closed renmori plugin` | Set `--plugin` / `$RENMORI_PLUGIN` to the plugin, or use `baseline`. See below. |
-| Prompt never appears in CI | By design — it only prompts on an interactive TTY. |
+| `has no 'game/' directory` | Point RenMori at the build folder that contains `game/`, not at `game/` itself or a `.zip` |
+| `is already protected` | The target already has `renmori.rmc`; start from a fresh build (or the `_bak`) |
+| `backup <dir>_bak already exists` | Remove it, or pass `--no-backup`, or use `-o` to protect a copy |
+| `strength 'x' requires the closed renmori plugin` | Set `--plugin` / `$RENMORI_PLUGIN` to the plugin, or use `baseline` (see below) |
+| Prompt never appears in CI | By design — it only prompts on an interactive TTY |
 
 ---
 
@@ -207,7 +207,7 @@ apply only to the plugin. The process contract between the tool and the plugin
 is specified in [interface.md](interface.md); the design is in
 [architecture.md](architecture.md).
 
-renmori targets **Ren'Py 8.x (Python 3)**. The runtime is verified in the actual
+RenMori targets **Ren'Py 8.x (Python 3)**. The runtime is verified in the actual
 Ren'Py engine on Linux (CI, headless) and macOS, and the Windows and Linux
 runtimes are exercised by the unit, golden-container, and key-derivation jobs on
 each platform; a run on Steam Deck under Proton is still pending. Test on your

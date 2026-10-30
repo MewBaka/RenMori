@@ -1,6 +1,6 @@
 # CLI & CI integration (M3)
 
-renmori is a single build-time command over a standard Ren'Py build artifact —
+RenMori is a single build-time command over a standard Ren'Py build artifact —
 no game source changes, no network, offline-capable.
 
 ## Commands
@@ -16,7 +16,7 @@ compiled scripts, removes the plaintext originals, writes the loader extension
 protected build against that manifest (container hash, required files, no
 plaintext left) — use it as a CI gate.
 
-Protecting in place (no `-o`) overwrites the original, so renmori first copies
+Protecting in place (no `-o`) overwrites the original, so RenMori first copies
 it to a sibling `<dir>_bak` directory; the run fails if `<dir>_bak` already
 exists. Pass `--no-backup` to overwrite without that copy. With `-o OUTPUT` the
 original is never touched (the copy is protected), so no backup is made.
@@ -68,7 +68,7 @@ See [`examples/renmori.toml`](../examples/renmori.toml) for the config file.
 By default `protect` generates a fresh random master key and an **independent**
 script key per build, embedded in the loader extension (baseline placeholder —
 the closed runtime derives these instead). To manage keys yourself, point
-renmori at environment variables holding 64-hex-char (32-byte) keys:
+RenMori at environment variables holding 64-hex-char (32-byte) keys:
 
 ```toml
 [keys]
@@ -77,7 +77,7 @@ script_env = "RENMORI_SCRIPT_KEY"
 ```
 
 Populate them from your CI secret store; never commit keys. If a named variable
-is unset, renmori falls back to a random key and says so. Output is not
+is unset, RenMori falls back to a random key and says so. Output is not
 byte-reproducible across builds even with fixed keys (per-file random salts), by
 design — assert on `verify` and the manifest's file list, not on the container
 hash across builds.
