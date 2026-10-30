@@ -1,36 +1,49 @@
-# Example renmori configuration. Place this as renmori.toml next to your built
-# game directory (or pass --config). Every field is optional; the defaults shown
-# are what renmori uses with no config at all. CLI flags override these, and
-# --exclude is added on top of the list here.
+# renmori.toml — optional configuration for `renmori protect`
+#
+# Every key is optional and has a sensible default, so a zero-config run works.
+# The command line overrides the file; --exclude extends the file's list rather
+# than replacing it. renmori looks for this file beside the game directory and
+# in the current working directory, or at the path given with -c/--config.
 
 [protect]
-# Plaintext bytes per encrypted chunk. Larger = slightly less overhead, coarser
-# random-access granularity. Default 65536.
-chunk_size = 65536
 
-# Game-relative globs to leave UNENCRYPTED on disk (fnmatch semantics; "*" spans
-# "/"). Use for files that must be read by other tools, or third-party content
-# whose license requires it to stay replaceable (e.g. an LGPL library's files).
-exclude = [
-    # "readme.txt",
-    # "thirdparty/*",
-]
+# Protection strength. "auto" uses the closed plugin's strongest offering when a
+# plugin is available (see docs/interface.md), and the open baseline otherwise.
+# "baseline" forces the open format; "poly" requires the plugin.
+strength = "auto"
 
-# Disable the in-game developer console, developer mode, and data-export
-# subcommands in the protected build. Default true. Turn off only for debugging.
+# Disable the developer console, developer mode, and data-export subcommands in
+# the protected build. Recommended on for a release.
 lockdown = true
 
-# Open tool supports "baseline". Higher strengths require the closed plugin.
-strength = "baseline"
+# Container chunk size in bytes (open baseline only; the poly engine chooses this
+# per build). Larger favors large CG and video; smaller lowers tiny-file overhead.
+# chunk_size = 65536
 
-# Keep the packed originals on disk (debugging only). Default false.
+# Keep the packed plaintext originals on disk after protection, for debugging.
+# Never enable this for a release.
 keep_plaintext = false
 
+# Game-relative globs to leave outside the container, unencrypted. Use this only
+# for files read outside renpy.loader (for example by the Steam SDK).
+exclude = []
+
+# Files kept as plaintext on disk because they are read outside the engine. The
+# default already covers the Steam app id.
+keep_on_disk = ["steam_appid.txt"]
+
+# Plugin only: target platforms to produce. Omit to auto-detect from the build's
+# lib/py3-* directories.
+# platforms = ["win-x64", "linux-x64", "mac-universal"]
+
+# Plugin only: bind the keys to a native launcher and ship it, so the keys
+# reconstruct only when the game is started through it.
+launcher = false
+
 [keys]
-# Read keys from these environment variables (64 hex chars = 32 bytes) instead
-# of generating a fresh random key per build. Use your CI's secret store; never
-# commit keys. If unset, a random key is generated each build (recommended
-# unless you have a reason to manage keys yourself). The script key is
-# independent of the master key by design.
+
+# Open baseline only: names of environment variables holding the hex container
+# and script keys. When unset, a fresh random key is generated per run. The poly
+# plugin derives its own keys and ignores this section.
 # master_env = "RENMORI_MASTER_KEY"
 # script_env = "RENMORI_SCRIPT_KEY"

@@ -73,7 +73,10 @@ it as a CI gate.
 | `-c, --config FILE` | — | autodetect | else `<game-dir>/renmori.toml` or `./renmori.toml` |
 | `--chunk-size N` | `chunk_size` | 65536 | container chunk size in bytes |
 | `--exclude GLOB` | `exclude` | none | leave matching files unencrypted (repeatable; adds to config) |
-| `--strength S` | `strength` | `baseline` | open tool: `baseline` only (see below) |
+| `--strength S` | `strength` | `auto` | `auto` uses the plugin's strongest offering when present, else `baseline`; `baseline` forces the open format; `poly` requires the plugin (see below) |
+| `--plugin PATH` | — | `$RENMORI_PLUGIN` | path to the closed protection plugin; enables full (`poly`) protection |
+| `--platforms LIST` | `platforms` | auto-detect | plugin only: comma list of target platforms, else detected from the build's `lib/py3-*` |
+| `--launcher` | `launcher` | off | plugin only: bind the keys to a native launcher and ship it |
 | `--no-lockdown` | `lockdown` | on | keep console/developer/export enabled |
 | `--no-backup` | — | off | protect in place without the `<dir>_bak` copy (no effect with `-o`) |
 | `--keep-plaintext` | `keep_plaintext` | off | don't delete packed originals (debug) |
@@ -174,21 +177,38 @@ python tools/verify_in_renpy.py --sdk /path/to/renpy-8.5.2-sdk --game /path/to/y
 | `has no 'game/' directory` | Point renmori at the build folder that contains `game/`, not at `game/` itself or a `.zip`. |
 | `is already protected` | The target already has `renmori.rmc`. Start from a fresh build (or the `_bak`). |
 | `backup <dir>_bak already exists` | Remove it, or pass `--no-backup`, or use `-o` to protect a copy. |
-| `strength 'x' requires the closed renmori plugin` | The open tool only does `baseline`. See below. |
+| `strength 'x' requires the closed renmori plugin` | Set `--plugin` / `$RENMORI_PLUGIN` to the plugin, or use `baseline`. See below. |
 | Prompt never appears in CI | By design — it only prompts on an interactive TTY. |
 
 ---
 
-## Baseline vs. the closed plugin
+## Baseline and full protection
 
-This open tool runs the **baseline** pipeline only: a fixed container format and
-a placeholder key embedded in the loader extension. That is enough to defeat
-off-the-shelf tools (`unrpa`, `unrpyc`, …). Per-build *structural* polymorphism,
-runtime key derivation, and anti-tamper are the **closed** component and are not
-in this repository in any form; `--strength` values other than `baseline` are
-rejected until that plugin is present. See
-[architecture.md](architecture.md) and [m4.md](m4.md).
+Out of the box this open tool runs the **baseline** pipeline: a fixed container
+format with a placeholder key embedded in the loader extension. That alone
+defeats off-the-shelf tools such as `unrpa` and `unrpyc`, but the key and the
+reader ship in the clear, so it is not real protection against a determined
+attacker.
 
-renmori targets **Ren'Py 8.x (Python 3)**. It is verified on macOS / Ren'Py
-8.5.2; Windows and Linux/Steam Deck code paths exist but are not yet run on that
-hardware — test on your target platform before shipping.
+**Full protection** — per-build structural polymorphism, runtime key derivation,
+a native core, and an optional native launcher — is the **closed** component,
+distributed as a prebuilt plugin and never as source. When the plugin is
+present, `renmori protect` discovers it and uses it automatically:
+
+```bash
+export RENMORI_PLUGIN=/path/to/renmori-plugin      # or pass --plugin PATH
+renmori protect ./dist/MyGame-1.0-pc -o ./dist/MyGame-1.0-pc-protected
+```
+
+With `--strength auto` (the default) the strongest format the plugin offers is
+applied; with no plugin it falls back to `baseline`, and an explicit
+non-baseline strength with no plugin is refused. `--platforms` and `--launcher`
+apply only to the plugin. The process contract between the tool and the plugin
+is specified in [interface.md](interface.md); the design is in
+[architecture.md](architecture.md).
+
+renmori targets **Ren'Py 8.x (Python 3)**. The runtime is verified in the actual
+Ren'Py engine on Linux (CI, headless) and macOS, and the Windows and Linux
+runtimes are exercised by the unit, golden-container, and key-derivation jobs on
+each platform; a run on Steam Deck under Proton is still pending. Test on your
+target platform before shipping.
