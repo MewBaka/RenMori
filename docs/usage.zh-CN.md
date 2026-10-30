@@ -65,8 +65,8 @@ renmori verify ./dist/MyGame-1.0-pc-protected
 | `-c, --config FILE` | — | 自动探测 | 否则取 `<game-dir>/renmori.toml` 或 `./renmori.toml` |
 | `--chunk-size N` | `chunk_size` | 65536 | 容器分块大小（字节） |
 | `--exclude GLOB` | `exclude` | 无 | 匹配到的文件保持不加密（可重复；在配置基础上追加） |
-| `--strength S` | `strength` | full | 默认为完整保护（插件的最强格式，无插件则失败）；`baseline` 强制使用开源格式；`auto` 为有插件时用完整、否则用基线（见下文） |
-| `--plugin PATH` | — | `$RENMORI_PLUGIN` | 闭源保护插件的路径；启用完整（`poly`）保护 |
+| `--strength S` | `strength` | full | 默认为完整保护（插件缺失时自动下载）；`baseline` 强制使用开源格式；`auto` 为可用时用完整、否则用基线（见下文） |
+| `--plugin PATH` | — | `$RENMORI_PLUGIN` | 使用这个插件二进制,而非自动下载的那个 |
 | `--platforms LIST` | `platforms` | 自动检测 | 仅插件：目标平台的逗号分隔列表，否则从构建的 `lib/py3-*` 检测 |
 | `--launcher` | `launcher` | 关 | 仅插件：将密钥绑定到原生启动器并随之分发 |
 | `--no-lockdown` | `lockdown` | 开 | 保持 console/developer/export 处于启用状态 |
@@ -164,19 +164,32 @@ python tools/verify_in_renpy.py --sdk /path/to/renpy-8.5.2-sdk --game /path/to/y
 | `the archive holds more than one game build` | 该 `.zip` 里打包了多个构建——先解压，再把 RenMori 指向你要的那一个 |
 | `is already protected` | 目标已含 `renmori.rmc`；请从全新构建（或 `_bak`）重新开始 |
 | `backup <dir>_bak already exists` | 删除它，或传入 `--no-backup`，或用 `-o` 保护一份副本 |
-| `strength 'x' requires the closed renmori plugin` | 将 `--plugin` / `$RENMORI_PLUGIN` 指向插件，或改用 `baseline`（见下文） |
+| `full protection needs the closed plugin` | 下载被拒绝或禁用了；放行自动下载、设 `--plugin` / `$RENMORI_PLUGIN`,或改用 `--strength baseline`（见下文） |
+| `Downloaded plugin failed its checksum` | 二进制与 Release 的 `SHA256SUMS` 不符；重试,或检查 `RENMORI_PLUGIN_BASE_URL` |
 | CI 中始终不出现提示 | 设计如此——仅在交互式 TTY 下提示 |
 
 ---
 
 ## 基线保护与完整保护
 
-**完整保护**——每次构建的结构多态、运行时密钥派生、原生核心，以及可选的原生启动器——是**闭源**组件，以预编译插件形式分发，从不以源码形式提供。它是**默认**：`renmori protect` 会发现插件并自动启用,而在无插件时直接失败,而不会悄悄退化为较弱的基线。
+**完整保护**——每次构建的结构多态、运行时密钥派生、原生核心，以及可选的原生启动器——是**闭源**组件：只有源码闭源,插件本身是免费的预编译二进制。它是**默认**,且无需手动安装:第一次做完整保护时,`renmori` 会从公开 Release 下载对应平台的插件,按 Release 的 `SHA256SUMS` 校验后缓存起来。
 
 ```bash
-export RENMORI_PLUGIN=/path/to/renmori-plugin      # or pass --plugin PATH
 renmori protect ./dist/MyGame-1.0-pc -o ./dist/MyGame-1.0-pc-protected
+# 终端里首次运行:
+#   ? 完整保护需要闭源插件。从下面下载 renmori-plugin-…?[Y/n]
 ```
+
+在终端里会先征询,在 CI(或 `-y` / `--quiet`)下直接下载。二进制缓存在 `~/.cache/renmori/`(Windows 为 `%LOCALAPPDATA%\renmori\`),之后的构建无需联网。可用环境变量控制:
+
+| 环境变量 | 作用 |
+|---------|------|
+| `RENMORI_PLUGIN` | 指向你已有的插件,完全跳过下载(等同 `--plugin`) |
+| `RENMORI_NO_DOWNLOAD=1` | 从不下载;插件缺失时直接失败(`auto` 下则退回基线) |
+| `RENMORI_PLUGIN_BASE_URL` | 从这里取二进制与 `SHA256SUMS`,而非公开 Release(用于内网镜像) |
+| `RENMORI_PLUGIN_TAG` | 拉取哪个 Release 标签 |
+
+无插件且禁用下载时,完整保护会**直接失败**,而不会悄悄退化为较弱的基线。
 
 **基线**流水线——固定的容器格式,加载器扩展中内嵌一个占位密钥——需经 `--strength baseline` 显式启用。它能挫败 `unrpa`、`unrpyc` 等现成工具,但密钥与读取器以明文随附,因此面对有决心的攻击者并非真正的保护。传入 `--strength auto` 可获得"有插件时用完整、否则用基线"的平滑行为。`--platforms` 与 `--launcher` 仅对插件生效,工具与插件之间的进程契约在 [interface.md](interface.md) 中规定。
 

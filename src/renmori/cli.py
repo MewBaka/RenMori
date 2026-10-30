@@ -34,6 +34,7 @@ import sys
 import tempfile
 import time
 import unicodedata
+import urllib.request
 import zlib
 import zipfile
 
@@ -61,6 +62,23 @@ SUPPORTED_STRENGTHS = {"baseline"}
 
 # Highest plugin-interface version this tool speaks (see docs/interface.md).
 PLUGIN_INTERFACE = 1
+
+# The closed poly plugin is a single prebuilt binary, distributed from the PUBLIC
+# RenMori release (free to use; only the source is closed). When no plugin is
+# supplied, the CLI downloads the right one for this platform, verifies it against
+# the release's SHA256SUMS, and caches it. All of this is overridable by env for
+# air-gapped builds and for pointing at a staging release:
+#   RENMORI_PLUGIN            explicit plugin path (skips everything below)
+#   RENMORI_NO_DOWNLOAD=1     never auto-download (fail/fall back instead)
+#   RENMORI_PLUGIN_BASE_URL   where <asset> and SHA256SUMS live (default: the release)
+#   RENMORI_PLUGIN_TAG        release tag to pull (default: PLUGIN_RELEASE_TAG)
+PLUGIN_RELEASE_TAG = "plugin-v0.1.0"
+PLUGIN_RELEASE_BASE = "https://github.com/MewBaka/RenMori/releases/download"
+_PLUGIN_ASSET = {
+    "darwin": "renmori-plugin-mac-universal",
+    "linux": "renmori-plugin-linux-x64",
+    "win32": "renmori-plugin-win-x64.exe",
+}
 
 EXIT_OK = 0
 EXIT_RUNTIME = 1
@@ -138,6 +156,17 @@ _MESSAGES = {
                          "zh": "不要再对这个文件夹跑 Ren'Py 启动器构建——它会从源码重建并丢掉保护。"},
     "done":             {"en": "Done in {t}s", "zh": "用时 {t}s"},
     "unzipped":         {"en": "Unzipped {name} -> {out}", "zh": "已解压 {name} -> {out}"},
+    "plugin_prompt":    {"en": "Full protection needs the closed plugin. Download {asset} from\n     {url} ? [Y/n] ",
+                         "zh": "完整保护需要闭源插件。从下面下载 {asset}?\n     {url} [Y/n] "},
+    "plugin_downloading": {"en": "Downloading {asset}", "zh": "正在下载 {asset}"},
+    "plugin_cached":    {"en": "Plugin ready: {path}", "zh": "插件就绪:{path}"},
+    "plugin_using_cached": {"en": "Using cached plugin {path}", "zh": "使用已缓存插件 {path}"},
+    "plugin_declined":  {"en": "Download declined; no plugin available",
+                         "zh": "已拒绝下载,无可用插件"},
+    "plugin_dl_fail":   {"en": "Could not download the plugin: {err}",
+                         "zh": "插件下载失败:{err}"},
+    "plugin_verify_fail": {"en": "Downloaded plugin failed its checksum; discarded",
+                           "zh": "下载的插件校验不通过,已丢弃"},
     "verifying":        {"en": "Verifying {dir}", "zh": "校验 {dir}"},
     "verified":         {"en": "Verified", "zh": "校验通过"},
     "problems_found":   {"en": "Problems found:", "zh": "发现问题:"},
@@ -501,15 +530,19 @@ def _do_protect(args, started):
     except RuntimeError as e:
         return _fail(str(e))
 
-    # Discover the closed plugin and settle the strength. The default is FULL
-    # protection: with no --strength, the plugin's strongest format is used, and
-    # if no plugin is found the run fails rather than silently shipping the weak
-    # baseline. Baseline is a deliberate opt-in (--strength baseline); `auto`
-    # keeps the old graceful fallback for those who want it.
-    plugin_path = _find_plugin(args)
-    caps = _query_capabilities(plugin_path) if plugin_path else None
-    plugin_strengths = caps.get("strengths", []) if caps else []
+    # Settle the strength and, when full protection is wanted, obtain the closed
+    # plugin: explicit --plugin/$RENMORI_PLUGIN, else a cached download, else fetch
+    # it from the public release (prompted on a terminal, automatic in CI). The
+    # default is FULL protection; with no plugin it fails rather than silently
+    # shipping the weak baseline. Baseline is a deliberate opt-in that never
+    # triggers a download; `auto` keeps the graceful full-else-baseline fallback.
     requested = settings["strength"]  # None unless the user set it
+    plugin_path = caps = None
+    plugin_strengths = []
+    if requested != "baseline":
+        plugin_path = _ensure_plugin(args)
+        caps = _query_capabilities(plugin_path) if plugin_path else None
+        plugin_strengths = caps.get("strengths", []) if caps else []
 
     if requested == "auto":
         strength = plugin_strengths[0] if plugin_strengths else "baseline"
@@ -693,7 +726,22 @@ def _release_hints(out_root):
 
 # --- closed-plugin integration (see docs/interface.md) --------------------
 
+def _plugin_asset():
+    """The release asset name for this platform, or None if unsupported."""
+    return _PLUGIN_ASSET.get("linux" if sys.platform.startswith("linux") else sys.platform)
+
+
+def _plugin_cache_dir():
+    tag = os.environ.get("RENMORI_PLUGIN_TAG", PLUGIN_RELEASE_TAG)
+    if sys.platform == "win32":
+        base = os.environ.get("LOCALAPPDATA") or os.path.join(os.path.expanduser("~"), "AppData", "Local")
+    else:
+        base = os.environ.get("XDG_CACHE_HOME") or os.path.join(os.path.expanduser("~"), ".cache")
+    return os.path.join(base, "renmori", "plugin", tag)
+
+
 def _find_plugin(args):
+    """Explicit plugin only: --plugin / $RENMORI_PLUGIN. No cache, no download."""
     path = args.plugin or os.environ.get("RENMORI_PLUGIN")
     if not path:
         return None
@@ -702,6 +750,87 @@ def _find_plugin(args):
         _note("plugin not found, ignoring: %s" % path)
         return None
     return path
+
+
+def _ensure_plugin(args):
+    """Resolve the closed plugin: explicit path, else a cached download, else fetch
+    it from the public release. Returns a path, or None when none is available
+    (no asset for this platform, download disabled or declined, or a fetch error).
+    The caller turns None into the clear 'needs the closed plugin' failure."""
+    explicit = _find_plugin(args)
+    if explicit:
+        return explicit
+
+    asset = _plugin_asset()
+    if not asset:
+        return None  # unknown platform; nothing to fetch
+
+    cached = os.path.join(_plugin_cache_dir(), asset)
+    if os.path.exists(cached):
+        _note(_t("plugin_using_cached", path=cached))
+        return cached
+
+    if os.environ.get("RENMORI_NO_DOWNLOAD"):
+        return None
+    return _download_plugin(args, asset, cached)
+
+
+def _download_plugin(args, asset, dest):
+    """Fetch `asset` from the release, verify its SHA256SUMS line, cache it at
+    `dest`, and return the path (None on decline/error). Prompts on an interactive
+    terminal; downloads without asking in CI, --quiet, or with -y."""
+    tag = os.environ.get("RENMORI_PLUGIN_TAG", PLUGIN_RELEASE_TAG)
+    base = os.environ.get("RENMORI_PLUGIN_BASE_URL") or (PLUGIN_RELEASE_BASE + "/" + tag)
+    base = base.rstrip("/")
+    url = base + "/" + asset
+
+    # Confirm, unless non-interactive / -y / --quiet (CI downloads silently).
+    interactive = sys.stdin.isatty() and not _QUIET and not getattr(args, "yes", False)
+    if interactive:
+        sys.stderr.write("  " + _yellow("? ") + _t("plugin_prompt", asset=asset, url=url))
+        sys.stderr.flush()
+        try:
+            ans = input()
+        except (EOFError, KeyboardInterrupt):
+            ans = "n"
+        if ans.strip().lower() in ("n", "no"):
+            _note(_t("plugin_declined"))
+            return None
+
+    try:
+        sums = urllib.request.urlopen(base + "/SHA256SUMS", timeout=60).read().decode("utf-8")
+        want = _sha_for(sums, asset)
+        if not want:
+            raise RuntimeError("no SHA256SUMS entry for %s" % asset)
+        _step(_t("plugin_downloading", asset=asset))
+        blob = urllib.request.urlopen(url, timeout=600).read()
+    except Exception as e:  # noqa: BLE001 - any fetch error -> no plugin, clear message
+        _note(_t("plugin_dl_fail", err=e))
+        return None
+
+    if hashlib.sha256(blob).hexdigest() != want:
+        _note(_t("plugin_verify_fail"))
+        return None
+
+    # Write atomically into the cache, and make it executable.
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+    tmp = dest + ".part." + os.urandom(4).hex()
+    with open(tmp, "wb") as f:
+        f.write(blob)
+    if sys.platform != "win32":
+        os.chmod(tmp, 0o755)
+    os.replace(tmp, dest)
+    _step(_t("plugin_cached", path=dest))
+    return dest
+
+
+def _sha_for(sums_text, asset):
+    """Pull the hex digest for `asset` out of a `sha256  name` SHA256SUMS file."""
+    for line in sums_text.splitlines():
+        parts = line.split()
+        if len(parts) == 2 and os.path.basename(parts[1]) == asset:
+            return parts[0].lower()
+    return None
 
 
 def _plugin_base_cmd(plugin_path):

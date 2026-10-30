@@ -78,8 +78,8 @@ it as a CI gate.
 | `-c, --config FILE` | — | autodetect | else `<game-dir>/renmori.toml` or `./renmori.toml` |
 | `--chunk-size N` | `chunk_size` | 65536 | container chunk size in bytes |
 | `--exclude GLOB` | `exclude` | none | leave matching files unencrypted (repeatable; adds to config) |
-| `--strength S` | `strength` | full | the default is full protection (the plugin's strongest, and it fails without a plugin); `baseline` forces the open format; `auto` is full-when-a-plugin-is-present, else baseline (see below) |
-| `--plugin PATH` | — | `$RENMORI_PLUGIN` | path to the closed protection plugin; enables full (`poly`) protection |
+| `--strength S` | `strength` | full | the default is full protection (the plugin is auto-downloaded if absent); `baseline` forces the open format; `auto` is full-when-available, else baseline (see below) |
+| `--plugin PATH` | — | `$RENMORI_PLUGIN` | use this plugin binary instead of the auto-downloaded one |
 | `--platforms LIST` | `platforms` | auto-detect | plugin only: comma list of target platforms, else detected from the build's `lib/py3-*` |
 | `--launcher` | `launcher` | off | plugin only: bind the keys to a native launcher and ship it |
 | `--no-lockdown` | `lockdown` | on | keep console/developer/export enabled |
@@ -184,7 +184,8 @@ python tools/verify_in_renpy.py --sdk /path/to/renpy-8.5.2-sdk --game /path/to/y
 | `the archive holds more than one game build` | The `.zip` bundles several builds — unzip it and point RenMori at the one you want |
 | `is already protected` | The target already has `renmori.rmc`; start from a fresh build (or the `_bak`) |
 | `backup <dir>_bak already exists` | Remove it, or pass `--no-backup`, or use `-o` to protect a copy |
-| `strength 'x' requires the closed renmori plugin` | Set `--plugin` / `$RENMORI_PLUGIN` to the plugin, or use `baseline` (see below) |
+| `full protection needs the closed plugin` | The plugin download was declined or disabled; let it download, set `--plugin` / `$RENMORI_PLUGIN`, or use `--strength baseline` (see below) |
+| `Downloaded plugin failed its checksum` | The binary did not match the release's `SHA256SUMS`; retry, or check `RENMORI_PLUGIN_BASE_URL` |
 | Prompt never appears in CI | By design — it only prompts on an interactive TTY |
 
 ---
@@ -192,15 +193,31 @@ python tools/verify_in_renpy.py --sdk /path/to/renpy-8.5.2-sdk --game /path/to/y
 ## Baseline and full protection
 
 **Full protection** — per-build structural polymorphism, runtime key derivation,
-a native core, and an optional native launcher — is the **closed** component,
-distributed as a prebuilt plugin and never as source. It is the **default**:
-`renmori protect` discovers the plugin and uses it automatically, and with no
-plugin it fails rather than silently shipping the weaker baseline.
+a native core, and an optional native launcher — is the **closed** component:
+only the source is closed; the plugin itself is a free prebuilt binary. It is the
+**default**, and you do not install it by hand. The first time you run a full
+protect, `renmori` downloads the plugin for your platform from the public release,
+verifies it against the release's `SHA256SUMS`, and caches it:
 
 ```bash
-export RENMORI_PLUGIN=/path/to/renmori-plugin      # or pass --plugin PATH
 renmori protect ./dist/MyGame-1.0-pc -o ./dist/MyGame-1.0-pc-protected
+# first run, on a terminal:
+#   ? Full protection needs the closed plugin. Download renmori-plugin-… ? [Y/n]
 ```
+
+On a terminal it asks first; in CI (or with `-y` / `--quiet`) it downloads without
+asking. The binary is cached under `~/.cache/renmori/` (`%LOCALAPPDATA%\renmori\`
+on Windows), so later builds need no network. To control it:
+
+| Env var | Effect |
+|---------|--------|
+| `RENMORI_PLUGIN` | path to a plugin you already have — skips the download entirely (same as `--plugin`) |
+| `RENMORI_NO_DOWNLOAD=1` | never download; fail (or fall back, with `auto`) if the plugin is absent |
+| `RENMORI_PLUGIN_BASE_URL` | pull the binary and `SHA256SUMS` from here instead of the public release (for an air-gapped mirror) |
+| `RENMORI_PLUGIN_TAG` | which release tag to fetch |
+
+With no plugin and downloads disabled, a full protect **fails** rather than
+silently shipping the weaker baseline.
 
 The **baseline** pipeline — a fixed container format with a placeholder key in
 the loader extension — is a deliberate opt-in via `--strength baseline`. It

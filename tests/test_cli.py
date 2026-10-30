@@ -1,3 +1,5 @@
+import argparse
+import hashlib
 import json
 import os
 import sys
@@ -5,6 +7,7 @@ import zipfile
 
 import pytest
 
+import renmori.cli as cli
 from renmori.cli import main
 
 
@@ -49,6 +52,14 @@ def run(argv, capsys):
     out = capsys.readouterr().out.strip().splitlines()
     result = json.loads(out[-1]) if out else {}
     return rc, result
+
+
+@pytest.fixture(autouse=True)
+def _offline(monkeypatch):
+    # Never let a test reach the real plugin release. The download tests opt back
+    # in with a local file:// stand-in (see the plugin_env fixture).
+    monkeypatch.setenv("RENMORI_NO_DOWNLOAD", "1")
+    monkeypatch.delenv("RENMORI_PLUGIN", raising=False)
 
 
 def test_protect_and_verify(tmp_path, capsys):
@@ -298,9 +309,69 @@ def test_zip_input_refuses_existing_output(tmp_path, capsys):
 
 
 def test_default_strength_requires_plugin(tmp_path, monkeypatch):
-    # default is full protection; with no plugin it fails rather than silently
-    # shipping the weak baseline
+    # default is full protection; with no plugin (and downloads off) it fails
+    # rather than silently shipping the weak baseline
     monkeypatch.delenv("RENMORI_PLUGIN", raising=False)
     src = make_game(tmp_path / "g", {"script.rpyc": b"x"})
     rc = main(["protect", str(src), "-o", str(tmp_path / "p")])
     assert rc == 2
+
+
+# --- plugin auto-download (against a local file:// stand-in release) ----------
+
+def _pargs(**kw):
+    ns = argparse.Namespace(plugin=None, yes=False)
+    ns.__dict__.update(kw)
+    return ns
+
+
+def _fake_release(dirp, asset, blob):
+    (dirp / asset).write_bytes(blob)
+    (dirp / "SHA256SUMS").write_text("%s  %s\n" % (hashlib.sha256(blob).hexdigest(), asset))
+
+
+@pytest.fixture
+def plugin_env(tmp_path, monkeypatch):
+    cache = tmp_path / "cache"
+    monkeypatch.setenv("XDG_CACHE_HOME", str(cache))
+    monkeypatch.setenv("LOCALAPPDATA", str(cache))
+    monkeypatch.delenv("RENMORI_NO_DOWNLOAD", raising=False)  # re-enable downloads
+    rel = tmp_path / "release"
+    rel.mkdir()
+    monkeypatch.setenv("RENMORI_PLUGIN_BASE_URL", "file://" + str(rel))
+    cli._QUIET, cli._LANG = False, "en"
+    return rel
+
+
+def test_plugin_downloads_verifies_and_caches(plugin_env):
+    asset = cli._plugin_asset()
+    _fake_release(plugin_env, asset, b"#!/bin/sh\necho plugin\n")
+    p = cli._ensure_plugin(_pargs())
+    assert p and os.path.isfile(p)
+    assert open(p, "rb").read() == b"#!/bin/sh\necho plugin\n"
+    assert os.access(p, os.X_OK)  # made executable
+    # second call is served from cache, even with the release now gone
+    (plugin_env / asset).unlink()
+    (plugin_env / "SHA256SUMS").unlink()
+    assert cli._ensure_plugin(_pargs()) == p
+
+
+def test_plugin_download_rejects_bad_checksum(plugin_env):
+    asset = cli._plugin_asset()
+    (plugin_env / asset).write_bytes(b"real bytes")
+    (plugin_env / "SHA256SUMS").write_text("%s  %s\n" % ("00" * 32, asset))
+    assert cli._ensure_plugin(_pargs()) is None
+    assert not (plugin_env.parent / "cache").exists() or not list((plugin_env.parent / "cache").rglob(asset))
+
+
+def test_plugin_no_download_env_disables_fetch(plugin_env, monkeypatch):
+    _fake_release(plugin_env, cli._plugin_asset(), b"x")
+    monkeypatch.setenv("RENMORI_NO_DOWNLOAD", "1")
+    assert cli._ensure_plugin(_pargs()) is None
+
+
+def test_plugin_explicit_path_wins_over_download(plugin_env, tmp_path):
+    _fake_release(plugin_env, cli._plugin_asset(), b"downloaded")
+    explicit = tmp_path / "myplugin"
+    explicit.write_bytes(b"explicit")
+    assert cli._ensure_plugin(_pargs(plugin=str(explicit))) == str(explicit)
