@@ -49,8 +49,15 @@ EXTENSION_NAME = "renmori.rpe"
 MANIFEST_NAME = "renmori-manifest.json"
 CONFIG_NAME = "renmori.toml"
 
-# Never packed: runtime-written dirs, and renmori's own artifacts.
-SKIP_TOP_DIRS = {"saves", "cache"}
+# Never packed: runtime-written dirs, and renmori's own artifacts. saves/ is user
+# data. cache/ is Ren'Py's regenerable cache, BUT it ships the compiled bytecode
+# of every script (cache/bytecode-*.rpyb, *analysis.rpyb, screens.rpyb) — leaving
+# those as plaintext would hand an attacker the scripts without touching the
+# container, so they are packed like any other file; the rest of cache/ (shader
+# list, build metadata) is harmless and stays on disk.
+SKIP_TOP_DIRS = {"saves"}
+CACHE_TOP_DIR = "cache"
+SENSITIVE_CACHE_EXTS = (".rpyb",)  # script-derived compiled/analysis caches
 SKIP_FILES = {CONTAINER_NAME, EXTENSION_NAME}
 
 # Files read OUTSIDE renpy.loader (by the Steam SDK or the native launcher), so
@@ -1057,6 +1064,10 @@ def _partition(game_dir, excludes):
         for fn in filenames:
             if rel_dir == "." and fn in SKIP_FILES:
                 continue
+            # Inside cache/, pack only the script-derived caches; leave the rest
+            # (shaders.txt, build_info.json) untouched on disk.
+            if top == CACHE_TOP_DIR and not fn.lower().endswith(SENSITIVE_CACHE_EXTS):
+                continue
             abs_path = pathlib.Path(dirpath) / fn
             if abs_path.is_symlink() or not abs_path.is_file():
                 continue
@@ -1166,9 +1177,10 @@ def cmd_verify(args):
         if sha != manifest.get("container_sha256"):
             problems.append("container sha mismatch")
 
-    # No plaintext scripts/archives should remain on disk.
+    # No plaintext scripts, archives, or compiled-script caches should remain on
+    # disk — including under cache/, which ships the scripts' bytecode.
     for p in game.rglob("*"):
-        if p.suffix in (".rpa", ".rpyc", ".rpy", ".rpyb") and "cache" not in p.parts and p.is_file():
+        if p.suffix in (".rpa", ".rpyc", ".rpy", ".rpyb", ".rpymc") and p.is_file():
             problems.append("plaintext left: %s" % p.relative_to(root))
             break
 

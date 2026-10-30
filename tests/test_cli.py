@@ -308,6 +308,40 @@ def test_zip_input_refuses_existing_output(tmp_path, capsys):
     assert rc == 2 and "already exists" in res["message"]
 
 
+def test_cache_bytecode_is_packed_not_left_plaintext(tmp_path, capsys):
+    # game/cache/*.rpyb is the scripts' compiled bytecode; it must be packed and
+    # removed, not left in the clear. Non-sensitive cache files stay on disk.
+    src = make_game(tmp_path / "g", {
+        "script.rpyc": b"not really rpyc",
+        "cache/bytecode-312.rpyb": b"compiled bytecode of every script",
+        "cache/screens.rpyb": b"compiled screens",
+        "cache/shaders.txt": b"shader1\nshader2\n",
+        "cache/build_info.json": b"{}",
+    })
+    out = tmp_path / "p"
+    rc, res = run(["protect", str(src), "-o", str(out)], capsys)
+    assert rc == 0
+    names = {e["name"] for e in json.loads((out / "renmori-manifest.json").read_text())["files"]}
+    assert "cache/bytecode-312.rpyb" in names and "cache/screens.rpyb" in names
+    assert not (out / "game" / "cache" / "bytecode-312.rpyb").exists()
+    assert not (out / "game" / "cache" / "screens.rpyb").exists()
+    # harmless cache files are left alone, unpacked
+    assert "cache/shaders.txt" not in names
+    assert (out / "game" / "cache" / "shaders.txt").is_file()
+    assert (out / "game" / "cache" / "build_info.json").is_file()
+    assert run(["verify", str(out)], capsys)[0] == 0
+
+
+def test_verify_flags_plaintext_bytecode_in_cache(tmp_path, capsys):
+    src = make_game(tmp_path / "g", {"a.png": b"a"})
+    out = tmp_path / "p"
+    assert run(["protect", str(src), "-o", str(out)], capsys)[0] == 0
+    (out / "game" / "cache").mkdir(parents=True, exist_ok=True)
+    (out / "game" / "cache" / "bytecode-312.rpyb").write_bytes(b"leaked script bytecode")
+    rc, res = run(["verify", str(out)], capsys)
+    assert rc == 1 and any("plaintext left" in p for p in res["problems"])
+
+
 def test_default_strength_requires_plugin(tmp_path, monkeypatch):
     # default is full protection; with no plugin (and downloads off) it fails
     # rather than silently shipping the weak baseline
