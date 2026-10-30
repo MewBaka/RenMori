@@ -1,69 +1,76 @@
-# renmori
+# RenMori
 
-**Full-data protection for commercial Ren'Py games.**
+**Full-data protection for commercial Ren'Py visual novels**
 
-renmori is a build-time tool plus a native runtime that takes an already-built
-Ren'Py 8.x game and produces a protected distribution. Every asset — scripts,
-sprites, CGs, audio, video, **fonts**, translations, config — is packed into
-encrypted containers and decrypted only inside the running engine. The goal is
-to make the common unpacking and decompiling tools (and agents that merely call
-them) fail outright, and to make every build different so that no single
-unpacker can ever work across games.
+RenMori is a build-time tool and a native runtime that takes an already-built
+Ren'Py 8.x distribution and produces a protected one. Every asset — scripts,
+sprites, CGs, audio, video, fonts, translations, and configuration — is packed
+into an encrypted container and decrypted only inside the running engine. The aim
+is twofold: the common unpacking and decompiling tools, and the agents that
+merely call them, fail outright, and every build differs so that no single
+unpacker works across games.
 
-> **Status:** early development. See [docs/architecture.md](docs/architecture.md)
-> for the design and [the roadmap](#roadmap) for what exists today.
+> **Status** — pre-1.0. The protection stack is built and verified; the design is
+> in [docs/architecture.md](docs/architecture.md), and current progress is in the
+> [roadmap](#roadmap) below.
+
+A Chinese version of this document is in [README.zh-CN.md](README.zh-CN.md).
 
 ---
 
-## What it protects against — and what it can't
+## What it protects against, and what it cannot
 
-Read this before anything else. **A game that runs on the player's machine can
-never be made uncrackable.** The engine must be able to read its own assets to
-run, so the keys and the decryption logic ship with the game, and the screen can
-always be captured. Every local DRM has eventually been broken. renmori does not
-pretend otherwise.
+Read this first. A game that runs on the player's machine can never be made
+uncrackable. The engine must read its own assets to run, so the keys and the
+decryption logic ship with the game, and the screen can always be captured. Every
+local content protection has eventually been broken, and RenMori does not claim
+otherwise.
 
-What renmori actually buys you:
+What RenMori does provide:
 
-1. **Off-the-shelf tools fail.** `unrpa`, `rpatool`, `RenPack`, `RenpyEx`,
-   `unrpyc` (including `--try-harder` and `un.rpyc` injection) do not work on a
-   protected build. This also stops the large majority of "rip my assets"
-   attempts, which are just someone running one of those tools.
-2. **Breaks don't port.** Every build uses a different container layout, script
-   encoding, and key derivation. Reverse-engineering one game yields a tool for
-   *that game, that version* — not a universal unpacker. You are not buying
-   "unbreakable"; you are buying "not breakable in bulk".
-3. **No plaintext on disk, ever** — fonts included.
+- off-the-shelf tools fail — `unrpa`, `rpatool`, `RenPack`, `RenpyEx`, and
+  `unrpyc` (including `--try-harder` and injection decompilation) do not work on a
+  protected build, which stops the large majority of extraction attempts, as those
+  are someone running one of these tools
+- a break does not transfer — every build uses a different container layout,
+  script encoding, and key derivation, so reverse-engineering one title yields a
+  tool for that one title and version, not a universal unpacker
+- no plaintext on disk at any time, fonts included
 
-If your threat model requires stopping a determined, skilled attacker from ever
-extracting a single asset, no client-side tool (renmori or otherwise) can give
-you that. renmori raises the cost to "dedicated, per-game, per-version expert
-effort", which is enough that most games are never worth cracking.
+If the threat model requires preventing a determined, skilled attacker from ever
+extracting a single asset, no client-side tool can provide that. RenMori raises
+the cost to dedicated, per-title, per-version expert effort, which is enough that
+most games are never worth the work.
 
-## Design priorities (in order)
+## Design priorities
 
-1. **Performance first.** Any protection measure that conflicts with runtime
-   performance is dropped. No heavy packers/VM protectors by default; encryption
-   is hardware-accelerated (AES-NI) and native; integrity checks run once at
-   startup, never on the hot path. A protected build must be indistinguishable
-   from an unprotected one in frame time, scene transitions, and CG/video.
-2. **Easy for developers / CI-friendly.** One command on a standard Ren'Py
-   build artifact, clear exit codes, config via file or environment, a sample
-   GitHub Actions workflow. No source changes to the game required.
-3. **Protection.** Delivered mainly through per-build polymorphism (zero runtime
-   cost) rather than runtime hardening.
+These are in order, and a lower priority yields to a higher one:
 
-## How it works (four layers)
+- performance first — any protection measure that conflicts with runtime
+  performance is dropped; there are no heavy packers or virtualizing protectors by
+  default, encryption is hardware-accelerated and native, and integrity is checked
+  once at startup rather than on the hot path, so a protected build is
+  indistinguishable from an unprotected one in frame time, scene transitions, and
+  CG or video playback
+- easy for developers and for CI — one command over a standard Ren'Py
+  distribution build, clear exit codes, configuration by file or environment, and
+  a sample GitHub Actions workflow, with no change to the game's source
+- protection — delivered mainly through per-build polymorphism, which carries zero
+  runtime cost, rather than through runtime hardening
+
+## How it works
+
+Protection is applied in four layers:
 
 | Layer | What happens |
 |-------|--------------|
-| **Assets** | Every file under `game/` goes into a custom encrypted container (no more RPA). A native module takes over `renpy.loader` and returns decrypted, streaming file objects. Large files (video/audio) are decrypted in chunks by offset, never whole into memory. |
-| **Scripts** | Compiled scripts use a custom AST format instead of standard `.rpyc`, with per-build class/field remapping, so pickle-based decompilers cannot reconstruct them. Embedded Python is compiled and encrypted. |
-| **Engine** | The engine and stdlib are packed and integrity-checked at startup. Only build-time-signed scripts load; stray `.rpy`/`.rpyc` dropped into the game dir are refused (this blocks injection decompilers). Developer console and data-export subcommands are disabled in release builds. |
-| **Launcher** | A native per-platform launcher replaces Ren'Py's, boots embedded Python from the encrypted container, and derives keys at runtime. No plaintext key on disk. |
+| Assets | every file under `game/` is packed into an encrypted container in place of RPA; a native module takes over `renpy.loader` and returns decrypted, streaming file objects, so large video and audio is decrypted per chunk by offset rather than whole into memory |
+| Scripts | compiled scripts use a custom AST format in place of standard `.rpyc`, with per-build class and field remapping, so pickle-based decompilers cannot reconstruct them, and embedded Python is compiled and encrypted |
+| Engine | only build-time-signed scripts load, and a stray `.rpy` or `.rpyc` dropped into the game directory is refused, which blocks injection decompilers; the developer console and the data-export subcommands are disabled in a release build |
+| Launcher | a native per-platform launcher runs first, derives the keys at run time, and starts the engine, so no plaintext key is on disk |
 
-Full detail in [docs/architecture.md](docs/architecture.md). Honest threat model
-in [docs/threat-model.md](docs/threat-model.md).
+The full design is in [docs/architecture.md](docs/architecture.md), and the honest
+threat model is in [docs/threat-model.md](docs/threat-model.md).
 
 ## Usage
 
@@ -72,71 +79,72 @@ renmori protect ./dist/MyGame-1.0-pc -o ./dist/MyGame-1.0-pc-protected
 renmori verify  ./dist/MyGame-1.0-pc-protected
 ```
 
-Zero-config by default; clear exit codes and a JSON result line for CI. Optional
-`renmori.toml` controls chunk size, an exclude list, lockdown, strength, and key
-sources. `protect` emits `renmori-manifest.json` (protected files, container
-fingerprint); `verify` re-checks a build against it. Full command reference in
-[docs/usage.md](docs/usage.md). See also [docs/ci.md](docs/ci.md),
-[docs/steam-release.md](docs/steam-release.md),
-[examples/renmori.toml](examples/renmori.toml), and
-[examples/github-actions-protect.yml](examples/github-actions-protect.yml).
+The command is zero-config by default, with clear exit codes and a JSON result
+line for CI. An optional `renmori.toml` controls the chunk size, an exclude list,
+lockdown, strength, and key sources. `protect` emits `renmori-manifest.json`,
+which lists the protected files and the container fingerprint, and `verify`
+re-checks a build against it. The full reference is in
+[docs/usage.md](docs/usage.md); see also [docs/ci.md](docs/ci.md),
+[docs/steam-release.md](docs/steam-release.md), and
+[examples/renmori.toml](examples/renmori.toml).
+
+Out of the box the tool applies the baseline format. Full protection — per-build
+polymorphism, runtime key derivation, and the native core and launcher — is the
+closed plugin, which `renmori protect` discovers and drives when it is present;
+the contract between the two is in [docs/interface.md](docs/interface.md).
 
 ## Platforms
 
-Windows, macOS, and Linux / Steam Deck.
+The targets are Windows, macOS, and Linux / Steam Deck:
 
-- **Steam:** the Steam overlay (which injects into the game process) is
-  explicitly allowed; anti-tamper is kept minimal so it never blocks the
-  overlay. Do **not** also wrap the build in Steam's own DRM. Achievements and
-  Cloud saves go through Ren'Py's normal API and are unaffected. See
-  [docs/steam-release.md](docs/steam-release.md) for the upload walkthrough.
-- **macOS:** notarization is **not** required. renmori only decrypts *data* and
-  never executes decrypted code, so it needs no hardened-runtime entitlements
-  and won't force you into paid signing. Apple Silicon requires at least an
-  ad-hoc signature to run at all (free, no account) — the build tool does this
-  automatically. If you do have a Developer ID, the binaries stay re-signable
-  and notarizable.
+- Steam — the Steam overlay injects into the game process, so it is explicitly
+  allowed and anti-tamper is kept minimal; do not additionally wrap the build in
+  Steam's own DRM; achievements and Cloud saves use Ren'Py's normal API and are
+  unaffected — see [docs/steam-release.md](docs/steam-release.md)
+- macOS — RenMori decrypts data only and never executes decrypted code, so it
+  needs no hardened-runtime entitlement and does not force paid signing, and
+  notarization is not required; Apple Silicon needs at least an ad-hoc signature
+  to run, which the build tool applies automatically, and a Developer ID build
+  stays re-signable and notarizable
 
 ## Open-core model
 
-renmori is **open-core**. The framework is free and open; the part whose secrecy
-actually matters is closed.
+RenMori is open-core: the framework is free and open, and the part whose secrecy
+matters is closed.
 
-- **Open** (this repository): the CLI, the `renpy.loader` hook framework / runtime
-  SDK, the baseline container format spec (v1), standard crypto primitive usage,
-  CI integration, docs, samples, tests. Usable on its own, at baseline strength.
-- **Closed** (shipped as a precompiled binary plugin the open CLI invokes): the
-  polymorphism engine, the key-derivation logic, and the anti-tamper runtime.
-  These are what prevent a *universal* unpacker, and the polymorphism engine
-  never ships to players — so keeping it closed is where secrecy is meaningful.
+- open, in this repository — the command-line tool, the `renpy.loader` hook
+  framework and runtime SDK, the baseline container format specification, the
+  standard crypto-primitive usage, the CI integration, the documentation, the
+  samples, and the tests; usable on its own at baseline strength
+- closed, shipped as a precompiled plugin that the open tool invokes — the
+  polymorphism engine, the key-derivation logic, and the anti-tamper runtime,
+  which are what prevent a universal unpacker; the polymorphism engine never ships
+  to players, so keeping it closed is where secrecy is meaningful
 
-The open CLI and the closed binary communicate over a stable, documented process
-interface. The interface is open; the implementation is not.
+The open tool and the closed plugin communicate over a stable, documented process
+interface ([docs/interface.md](docs/interface.md)); the interface is open and the
+implementation is not.
 
 ## Licensing
 
-- RenMori — the framework and tools, the closed plugin, and the runtime that
-  ships inside your game — is under the **RenMori License**, see [`LICENSE`](LICENSE)
-  (Chinese: [`LICENSE.zh-CN.md`](LICENSE.zh-CN.md)). Using RenMori to protect any
-  Ren'Py game, including a commercial one, is free, and you may redistribute the
-  RenMori runtime embedded inside your released game at no charge. Selling RenMori
-  itself or a modified version, or running a paid encryption service with it, is
-  not permitted. See [docs/architecture.md](docs/architecture.md#licensing).
-- Third-party dependency notices live in [`NOTICE`](NOTICE). Note ffmpeg's
-  LGPL/GPL terms in particular.
-- Contributions require a CLA (see [`CONTRIBUTING.md`](CONTRIBUTING.md)).
+RenMori — the framework and tools, the closed plugin, and the runtime that ships
+inside a game — is under the RenMori License ([`LICENSE`](LICENSE); Chinese
+[`LICENSE.zh-CN.md`](LICENSE.zh-CN.md)). Using RenMori to protect any Ren'Py game,
+including a commercial one, is free, and the RenMori runtime may be redistributed
+embedded in a released game at no charge. Selling RenMori itself or a modified
+version, or running a paid encryption service with it, is not permitted. This is a
+source-available license rather than an OSI open-source one, because the no-resale
+term cannot be expressed under a permissive license.
 
-**No warranty of unbreakability.** See the EULA and
-[docs/threat-model.md](docs/threat-model.md).
+Third-party notices are in [`NOTICE`](NOTICE), where the FFmpeg LGPL and GPL terms
+warrant particular attention. No warranty of unbreakability is given; see the
+license and [docs/threat-model.md](docs/threat-model.md).
 
 ## Roadmap
 
-- [x] **M0** — Documentation (this repo's `docs/`).
-- [x] **M1** — Asset-layer PoC + container, loader hook, crypto backends; verified byte-perfect in-engine on Ren'Py 8.5.2. See [docs/m1-results.md](docs/m1-results.md).
-- [x] **M2** — Script transform (defeats `unrpyc`/`rpycdec`), injection block, release lockdown. See [docs/script-layer.md](docs/script-layer.md).
-- [x] **M3** — CLI polish + CI integration: `renmori.toml`, `--exclude`, env-key sources, `verify` command, exit codes, GitHub Actions sample. See [docs/ci.md](docs/ci.md).
-- [~] **M4** — Baseline per-build divergence, cross-platform `.rpe` path, Steam safeguards, `renpy.exists` fallback (verified on macOS/8.5.2). The polymorphism engine and native key-deriving launcher are the closed component; live Windows/Linux/Steam runs are hardware-pending. See [docs/m4.md](docs/m4.md).
-
-## 中文说明
-
-See [README.zh-CN.md](README.zh-CN.md).
+- [x] **M0** — documentation, in this repository's `docs/`
+- [x] **M1** — asset-layer proof of concept (container, loader hook, crypto backends), verified byte-perfect in the engine on Ren'Py 8.5.2 — see [docs/m1-results.md](docs/m1-results.md)
+- [x] **M2** — script transform that defeats `unrpyc` and `rpycdec`, injection blocking, and release lockdown — see [docs/script-layer.md](docs/script-layer.md)
+- [x] **M3** — command-line and CI integration: `renmori.toml`, `--exclude`, environment key sources, the `verify` command, exit codes, and a GitHub Actions sample — see [docs/ci.md](docs/ci.md)
+- [x] **M4** — per-build divergence, the cross-platform `.rpe` path, Steam safeguards, and the `renpy.exists` fallback — see [docs/m4.md](docs/m4.md)
+- [x] **closed stack** — the polymorphism engine, runtime key derivation, native core, and native launcher, verified in the real Ren'Py engine on Linux (CI) and macOS, with the open tool driving the closed plugin over the documented interface
