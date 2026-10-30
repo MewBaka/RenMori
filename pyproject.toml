@@ -8,7 +8,7 @@ version = "0.0.1"
 description = "Full-data protection for commercial Ren'Py games (open-core framework)."
 readme = "README.md"
 requires-python = ">=3.9"
-license = "Apache-2.0"
+license = { file = "LICENSE" }
 authors = [{ name = "MewBaka" }]
 
 # NOTE: `cryptography` is a dependency of the BUILD TOOL only (our dev/CI

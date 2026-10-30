@@ -1,11 +1,13 @@
-renmori
+RenMori
 Copyright (c) 2026 MewBaka
 
-This product includes software developed by third parties. The open-source
-components of renmori are distributed under the license in the LICENSE file.
-The closed-source binary plugin and the runtime that ships inside protected
-games are governed by a separate commercial EULA (not included in this
-repository).
+This product includes software developed by third parties. RenMori — the
+framework and tools, the closed binary plugin, and the runtime that ships inside
+protected games — is governed by the RenMori License in the LICENSE file (a
+Chinese translation is in LICENSE.zh-CN.md): free to use to protect any Ren'Py
+game, including commercial games, with no charge; selling RenMori itself or a
+modified version, or running a paid encryption service with it, is not
+permitted.
 
 This NOTICE file lists third-party components and the license obligations that
 attach to them. It is maintained as dependencies are added; entries marked

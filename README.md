@@ -115,12 +115,13 @@ interface. The interface is open; the implementation is not.
 
 ## Licensing
 
-- Open-source components: **Apache-2.0**, see [`LICENSE`](LICENSE). Chosen for
-  its patent grant and trademark clause. Covers the open parts only; it does not
-  reach the closed binary. See [docs/architecture.md](docs/architecture.md#licensing).
-- The closed binary plugin and the runtime that ships inside your game are
-  covered by a separate commercial EULA, which grants you the right to
-  redistribute the runtime inside your released game.
+- RenMori — the framework and tools, the closed plugin, and the runtime that
+  ships inside your game — is under the **RenMori License**, see [`LICENSE`](LICENSE)
+  (Chinese: [`LICENSE.zh-CN.md`](LICENSE.zh-CN.md)). Using RenMori to protect any
+  Ren'Py game, including a commercial one, is free, and you may redistribute the
+  RenMori runtime embedded inside your released game at no charge. Selling RenMori
+  itself or a modified version, or running a paid encryption service with it, is
+  not permitted. See [docs/architecture.md](docs/architecture.md#licensing).
 - Third-party dependency notices live in [`NOTICE`](NOTICE). Note ffmpeg's
   LGPL/GPL terms in particular.
 - Contributions require a CLA (see [`CONTRIBUTING.md`](CONTRIBUTING.md)).

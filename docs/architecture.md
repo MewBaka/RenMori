@@ -194,14 +194,17 @@ measured to have no perceptible performance impact.
 
 ## Licensing
 
-- Open components: **Apache-2.0**, see `../LICENSE`. Chosen for its patent grant
-  and trademark clause. Covers open parts only; does not reach the closed binary.
-- Closed binary + the runtime shipped inside customer games: a separate
-  commercial **EULA** that **explicitly grants redistribution of the runtime
-  inside the released game** (without it, customers can't legally sell their
-  game).
-- **CLA** required for contributions, so community code can be used in the closed
-  commercial build and the license can change.
+- Everything — the framework and tools, the closed plugin, and the runtime
+  shipped inside games — is under the **RenMori License** (`../LICENSE`; Chinese
+  `../LICENSE.zh-CN.md`): free to use to protect any Ren'Py game, including a
+  commercial one, and the runtime may be **redistributed embedded in the released
+  game** at no charge (so a developer can legally sell their protected game).
+- Not permitted: selling RenMori itself or a modified version, or running a paid
+  encryption service with it. This is a source-available license, not an OSI
+  open-source license, because the no-resale term cannot be expressed under a
+  permissive license.
+- **CLA** required for contributions, so contributed code can be used across the
+  framework and the closed plugin under a single, consistent license.
 - Third-party notices in `../NOTICE` — **ffmpeg (LGPL/GPL) is the compliance
   landmine**; also the AES library and Ren'Py's own license.
 - **Security disclaimer**: "no protection is unbreakable"; limits liability if a
