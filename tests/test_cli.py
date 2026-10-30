@@ -55,6 +55,62 @@ def test_already_protected(tmp_path, capsys):
     assert rc == 2 and "already protected" in res["message"]
 
 
+def test_inplace_backs_up_by_default(tmp_path, capsys):
+    src = make_game(tmp_path / "g", {"images/bg.png": b"\x89PNG" + b"x" * 50,
+                                     "script.rpyc": b"not really rpyc"})
+    rc, res = run(["protect", str(src)], capsys)
+    assert rc == 0 and res["status"] == "ok"
+    bak = tmp_path / "g_bak"
+    assert res["backup"] == str(bak)
+    # Backup holds the untouched originals; the protected dir does not.
+    assert (bak / "game" / "script.rpyc").is_file()
+    assert not (src / "game" / "script.rpyc").exists()
+    assert (src / "game" / "renmori.rmc").is_file()
+
+
+def test_inplace_refuses_when_backup_exists(tmp_path, capsys):
+    src = make_game(tmp_path / "g", {"a.png": b"data"})
+    (tmp_path / "g_bak").mkdir()
+    rc, res = run(["protect", str(src)], capsys)
+    assert rc == 2 and "already exists" in res["message"]
+    assert not (src / "game" / "renmori.rmc").exists()  # nothing protected
+
+
+def test_no_backup_overwrites_in_place(tmp_path, capsys):
+    src = make_game(tmp_path / "g", {"a.png": b"data"})
+    rc, res = run(["protect", str(src), "--no-backup"], capsys)
+    assert rc == 0 and res["status"] == "ok"
+    assert "backup" not in res
+    assert not (tmp_path / "g_bak").exists()
+
+
+def test_output_mode_makes_no_backup(tmp_path, capsys):
+    src = make_game(tmp_path / "g", {"a.png": b"data"})
+    rc, res = run(["protect", str(src), "-o", str(tmp_path / "p")], capsys)
+    assert rc == 0 and "backup" not in res
+    assert not (tmp_path / "g_bak").exists()
+
+
+def test_quiet_emits_only_json(tmp_path, capsys):
+    src = make_game(tmp_path / "g", {"a.png": b"data", "s.rpyc": b"rpyc"})
+    rc = main(["protect", str(src), "-o", str(tmp_path / "p"), "--quiet"])
+    cap = capsys.readouterr()
+    assert rc == 0
+    assert cap.err == ""  # no styled output on stderr
+    lines = cap.out.strip().splitlines()
+    assert len(lines) == 1 and json.loads(lines[0])["status"] == "ok"
+
+
+def test_lang_zh_localizes_stderr_only(tmp_path, capsys):
+    src = make_game(tmp_path / "g", {"a.png": b"data"})
+    rc = main(["protect", str(src), "-o", str(tmp_path / "p"), "--lang", "zh"])
+    cap = capsys.readouterr()
+    assert rc == 0
+    assert "保护完成" in cap.err  # human text is Chinese
+    res = json.loads(cap.out.strip().splitlines()[-1])
+    assert res["status"] == "ok" and "output" in res  # JSON keys stay English
+
+
 def test_exclude(tmp_path, capsys):
     src = make_game(tmp_path / "g", {
         "keep.png": b"a", "notes.txt": b"b", "extras/readme.txt": b"c",

@@ -65,7 +65,7 @@ effort", which is enough that most games are never worth cracking.
 Full detail in [docs/architecture.md](docs/architecture.md). Honest threat model
 in [docs/threat-model.md](docs/threat-model.md).
 
-## Usage (planned CLI)
+## Usage
 
 ```bash
 renmori protect ./dist/MyGame-1.0-pc -o ./dist/MyGame-1.0-pc-protected
@@ -75,8 +75,10 @@ renmori verify  ./dist/MyGame-1.0-pc-protected
 Zero-config by default; clear exit codes and a JSON result line for CI. Optional
 `renmori.toml` controls chunk size, an exclude list, lockdown, strength, and key
 sources. `protect` emits `renmori-manifest.json` (protected files, container
-fingerprint); `verify` re-checks a build against it. See
-[docs/ci.md](docs/ci.md), [examples/renmori.toml](examples/renmori.toml), and
+fingerprint); `verify` re-checks a build against it. Full command reference in
+[docs/usage.md](docs/usage.md). See also [docs/ci.md](docs/ci.md),
+[docs/steam-release.md](docs/steam-release.md),
+[examples/renmori.toml](examples/renmori.toml), and
 [examples/github-actions-protect.yml](examples/github-actions-protect.yml).
 
 ## Platforms
@@ -86,7 +88,8 @@ Windows, macOS, and Linux / Steam Deck.
 - **Steam:** the Steam overlay (which injects into the game process) is
   explicitly allowed; anti-tamper is kept minimal so it never blocks the
   overlay. Do **not** also wrap the build in Steam's own DRM. Achievements and
-  Cloud saves go through Ren'Py's normal API and are unaffected.
+  Cloud saves go through Ren'Py's normal API and are unaffected. See
+  [docs/steam-release.md](docs/steam-release.md) for the upload walkthrough.
 - **macOS:** notarization is **not** required. renmori only decrypts *data* and
   never executes decrypted code, so it needs no hardened-runtime entitlements
   and won't force you into paid signing. Apple Silicon requires at least an

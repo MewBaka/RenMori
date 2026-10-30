@@ -16,6 +16,11 @@ compiled scripts, removes the plaintext originals, writes the loader extension
 protected build against that manifest (container hash, required files, no
 plaintext left) — use it as a CI gate.
 
+Protecting in place (no `-o`) overwrites the original, so renmori first copies
+it to a sibling `<dir>_bak` directory; the run fails if `<dir>_bak` already
+exists. Pass `--no-backup` to overwrite without that copy. With `-o OUTPUT` the
+original is never touched (the copy is protected), so no backup is made.
+
 Input is whatever your Ren'Py build produces: any directory containing a
 `game/` subdirectory.
 
@@ -29,7 +34,14 @@ Input is whatever your Ren'Py build produces: any directory containing a
 
 The final line of stdout is always a JSON object (`{"status": "ok", …}` or
 `{"status": "error", …}`); progress goes to stderr. Use `--quiet` to emit only
-the JSON.
+the JSON. The styled stderr output and its language never affect stdout: the
+JSON keys and values stay English in every locale, so CI parsing is stable.
+
+Protecting in place prints a summary and asks for confirmation (`[y/N]`) — but
+**only on an interactive terminal**. When stdin is not a TTY (CI), or with
+`--quiet` or `-y/--yes`, it proceeds without prompting, so pipelines never hang.
+Color is auto-disabled off a TTY and honors `NO_COLOR`. The output language
+follows the system locale; pin it with `--lang en|zh` or `RENMORI_LANG`.
 
 ## Options (protect)
 
@@ -41,8 +53,13 @@ the JSON.
 | `--exclude GLOB` | `exclude` | none | leave matching files unencrypted (repeatable; CLI adds to config) |
 | `--strength S` | `strength` | `baseline` | open tool: `baseline` only |
 | `--no-lockdown` | `lockdown` | on | keep console/developer/export enabled |
+| `--no-backup` | — | off | skip the default `<dir>_bak` copy when protecting in place (no effect with `-o`) |
 | `--keep-plaintext` | `keep_plaintext` | off | debugging |
-| `--quiet` | — | off | only print the final JSON |
+| `-y, --yes` | — | off | skip the pre-protect confirmation prompt |
+| `--no-hints` | — | off | don't print the "create a release build" guidance on success |
+| `--lang {auto,en,zh}` | — | `auto` | language of the human-facing output (also `RENMORI_LANG`); `auto` follows the system locale |
+| `--no-color` | — | off | disable ANSI color (also honors `NO_COLOR`) |
+| `--quiet` | — | off | only print the final JSON (no styled output on stderr) |
 
 See [`examples/renmori.toml`](../examples/renmori.toml) for the config file.
 
