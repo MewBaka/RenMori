@@ -46,7 +46,13 @@ def install(container_path, master_key, script_key=None, lockdown=True):
     backend = _runtime_backend()
     reader = ContainerReader(container_path, master_key, backend=backend)
 
-    from renpy.pygame.rwobject import RWopsIO
+    # Ren'Py 8.4+ exposes pygame_sdl2 as `renpy.pygame`; 8.0–8.3 still import it
+    # as the top-level `pygame_sdl2`. Support both so the hook works across the
+    # whole 8.x range (on 8.0–8.3 the renpy.pygame-only import crashed at boot).
+    try:
+        from renpy.pygame.rwobject import RWopsIO
+    except ImportError:
+        from pygame_sdl2.rwobject import RWopsIO
 
     def open_callback(name):
         if name not in reader:
