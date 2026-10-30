@@ -73,7 +73,7 @@ it as a CI gate.
 | `-c, --config FILE` | — | autodetect | else `<game-dir>/renmori.toml` or `./renmori.toml` |
 | `--chunk-size N` | `chunk_size` | 65536 | container chunk size in bytes |
 | `--exclude GLOB` | `exclude` | none | leave matching files unencrypted (repeatable; adds to config) |
-| `--strength S` | `strength` | `auto` | `auto` uses the plugin's strongest offering when present, else `baseline`; `baseline` forces the open format; `poly` requires the plugin (see below) |
+| `--strength S` | `strength` | full | the default is full protection (the plugin's strongest, and it fails without a plugin); `baseline` forces the open format; `auto` is full-when-a-plugin-is-present, else baseline (see below) |
 | `--plugin PATH` | — | `$RENMORI_PLUGIN` | path to the closed protection plugin; enables full (`poly`) protection |
 | `--platforms LIST` | `platforms` | auto-detect | plugin only: comma list of target platforms, else detected from the build's `lib/py3-*` |
 | `--launcher` | `launcher` | off | plugin only: bind the keys to a native launcher and ship it |
@@ -184,28 +184,30 @@ python tools/verify_in_renpy.py --sdk /path/to/renpy-8.5.2-sdk --game /path/to/y
 
 ## Baseline and full protection
 
-Out of the box this open tool runs the **baseline** pipeline: a fixed container
-format with a placeholder key embedded in the loader extension. That alone
-defeats off-the-shelf tools such as `unrpa` and `unrpyc`, but the key and the
-reader ship in the clear, so it is not real protection against a determined
-attacker.
-
 **Full protection** — per-build structural polymorphism, runtime key derivation,
 a native core, and an optional native launcher — is the **closed** component,
-distributed as a prebuilt plugin and never as source. When the plugin is
-present, `renmori protect` discovers it and uses it automatically:
+distributed as a prebuilt plugin and never as source. It is the **default**:
+`renmori protect` discovers the plugin and uses it automatically, and with no
+plugin it fails rather than silently shipping the weaker baseline.
 
 ```bash
 export RENMORI_PLUGIN=/path/to/renmori-plugin      # or pass --plugin PATH
 renmori protect ./dist/MyGame-1.0-pc -o ./dist/MyGame-1.0-pc-protected
 ```
 
-With `--strength auto` (the default) the strongest format the plugin offers is
-applied; with no plugin it falls back to `baseline`, and an explicit
-non-baseline strength with no plugin is refused. `--platforms` and `--launcher`
-apply only to the plugin. The process contract between the tool and the plugin
-is specified in [interface.md](interface.md); the design is in
-[architecture.md](architecture.md).
+The **baseline** pipeline — a fixed container format with a placeholder key in
+the loader extension — is a deliberate opt-in via `--strength baseline`. It
+defeats off-the-shelf tools such as `unrpa` and `unrpyc`, but the key and the
+reader ship in the clear, so it is not real protection against a determined
+attacker. Pass `--strength auto` for the graceful behavior of full when a plugin
+is present and baseline otherwise. `--platforms` and `--launcher` apply only to
+the plugin, and the process contract is specified in
+[interface.md](interface.md).
+
+Either pipeline handles a game built with the launcher's archives: a `.rpa`
+archive is unpacked during protection and its entries are packed into the
+container as individual files, so the engine still finds the scripts and assets
+once the archive is gone.
 
 RenMori targets **Ren'Py 8.x (Python 3)**. The runtime is verified in the actual
 Ren'Py engine on Linux (CI, headless) and macOS, and the Windows and Linux
