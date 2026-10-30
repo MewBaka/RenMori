@@ -75,7 +75,6 @@ PLUGIN_INTERFACE = 1
 PLUGIN_RELEASE_TAG = "plugin-v0.1.0"
 PLUGIN_RELEASE_BASE = "https://github.com/MewBaka/RenMori/releases/download"
 _PLUGIN_ASSET = {
-    "darwin": "renmori-plugin-mac-universal",
     "linux": "renmori-plugin-linux-x64",
     "win32": "renmori-plugin-win-x64.exe",
 }
@@ -727,7 +726,11 @@ def _release_hints(out_root):
 # --- closed-plugin integration (see docs/interface.md) --------------------
 
 def _plugin_asset():
-    """The release asset name for this platform, or None if unsupported."""
+    """The release asset name for this platform, or None if unsupported. macOS
+    ships a binary per arch (arm64 / Intel x86_64); the others are single-arch."""
+    if sys.platform == "darwin":
+        import platform
+        return "renmori-plugin-mac-" + ("arm64" if platform.machine() == "arm64" else "x86_64")
     return _PLUGIN_ASSET.get("linux" if sys.platform.startswith("linux") else sys.platform)
 
 
