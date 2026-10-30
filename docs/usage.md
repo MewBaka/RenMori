@@ -30,15 +30,19 @@ Requires Python 3.9+ (reading a `renmori.toml` config needs 3.11+, or the
 ## Quick start
 
 ```bash
-# 1. Build your game in the Ren'Py launcher (Build Distributions), then unzip it.
-# 2. Protect the built folder into a new one:
+# 1. Build your game in the Ren'Py launcher (Build Distributions).
+# 2. Protect the build. The input is the built folder OR the .zip the launcher made:
 renmori protect ./dist/MyGame-1.0-pc -o ./dist/MyGame-1.0-pc-protected
+renmori protect ./dist/MyGame-1.0-pc.zip          # unzips it for you
 
 # 3. Check it:
 renmori verify ./dist/MyGame-1.0-pc-protected
 ```
 
-The input is any directory that contains a `game/` subdirectory. `protect` packs
+The input is any directory that contains a `game/` subdirectory, or a `.zip` of
+one (the launcher's `*-pc.zip`, `*-mac.zip`, etc.). A `.zip` is extracted next to
+itself — into a sibling folder named after the archive, or into `-o OUTPUT` — and
+the archive is left untouched as your original, so no `_bak` is made. `protect` packs
 everything under `game/` into `game/renmori.rmc`, transforms the compiled
 scripts, deletes the plaintext originals, writes the loader extension
 `game/renmori.rpe`, and emits `renmori-manifest.json`.
@@ -47,9 +51,10 @@ scripts, deletes the plaintext originals, writes the loader extension
 
 ## Commands
 
-### `renmori protect <game-dir> [options]`
+### `renmori protect <game-dir | game.zip> [options]`
 
-Protect a distribution build directory.
+Protect a distribution build. The argument is the built directory, or a `.zip` of
+one — a `.zip` is extracted first (see "Quick start").
 
 - **In place (default):** overwrites the directory, but first copies the
   original to a sibling `<dir>_bak` — on an interactive terminal it prints a
@@ -174,7 +179,9 @@ python tools/verify_in_renpy.py --sdk /path/to/renpy-8.5.2-sdk --game /path/to/y
 
 | Symptom | Cause / fix |
 |---------|-------------|
-| `has no 'game/' directory` | Point RenMori at the build folder that contains `game/`, not at `game/` itself or a `.zip` |
+| `has no 'game/' directory` | Point RenMori at the build folder that contains `game/` (or its `.zip`), not at `game/` itself |
+| `no 'game/' directory found in the archive` | The `.zip` is not a Ren'Py build — pass the launcher's distribution archive, which holds `game/` |
+| `the archive holds more than one game build` | The `.zip` bundles several builds — unzip it and point RenMori at the one you want |
 | `is already protected` | The target already has `renmori.rmc`; start from a fresh build (or the `_bak`) |
 | `backup <dir>_bak already exists` | Remove it, or pass `--no-backup`, or use `-o` to protect a copy |
 | `strength 'x' requires the closed renmori plugin` | Set `--plugin` / `$RENMORI_PLUGIN` to the plugin, or use `baseline` (see below) |

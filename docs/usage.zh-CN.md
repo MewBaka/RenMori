@@ -29,23 +29,24 @@ renmori --version
 ## 快速上手
 
 ```bash
-# 1. Build your game in the Ren'Py launcher (Build Distributions), then unzip it.
-# 2. Protect the built folder into a new one:
+# 1. 在 Ren'Py 启动器里构建游戏（Build Distributions）
+# 2. 保护构建产物，输入可以是构建目录，也可以是启动器打出的 .zip：
 renmori protect ./dist/MyGame-1.0-pc -o ./dist/MyGame-1.0-pc-protected
+renmori protect ./dist/MyGame-1.0-pc.zip          # 自动为你解压
 
-# 3. Check it:
+# 3. 校验：
 renmori verify ./dist/MyGame-1.0-pc-protected
 ```
 
-输入为任意包含 `game/` 子目录的目录。`protect` 会将 `game/` 下的全部内容打包进 `game/renmori.rmc`，转换编译后的脚本，删除明文原始文件，写入加载器扩展 `game/renmori.rpe`，并生成 `renmori-manifest.json`。
+输入为任意包含 `game/` 子目录的目录，或一个这样目录的 `.zip`（启动器打出的 `*-pc.zip`、`*-mac.zip` 等）。传入 `.zip` 时会先就地解压——解到同级、以归档名命名的文件夹，或解到 `-o OUTPUT` 指定的目录，原归档保持不变可作为原件，因此不再另建 `_bak`。`protect` 会将 `game/` 下的全部内容打包进 `game/renmori.rmc`，转换编译后的脚本，删除明文原始文件，写入加载器扩展 `game/renmori.rpe`，并生成 `renmori-manifest.json`。
 
 ---
 
 ## 命令
 
-### `renmori protect <game-dir> [options]`
+### `renmori protect <game-dir | game.zip> [options]`
 
-保护一个发行版构建目录
+保护一个发行版构建。参数可以是构建目录，也可以是它的 `.zip`——传入 `.zip` 会先自动解压（见「快速上手」）
 
 - **原地保护（默认）：** 覆盖该目录，但会先将原始目录复制到同级的 `<dir>_bak`——在交互式终端下会先打印摘要并询问 `[y/N]`，之后才改动任何文件
 - **输出到新目录：** `-o OUTPUT` 保护一份副本并保持原目录不变（此模式下不创建备份）
@@ -158,7 +159,9 @@ python tools/verify_in_renpy.py --sdk /path/to/renpy-8.5.2-sdk --game /path/to/y
 
 | 现象 | 原因 / 处理 |
 |---------|-------------|
-| `has no 'game/' directory` | 将 RenMori 指向包含 `game/` 的构建目录，而非 `game/` 本身或 `.zip` |
+| `has no 'game/' directory` | 将 RenMori 指向包含 `game/` 的构建目录（或它的 `.zip`），而非 `game/` 本身 |
+| `no 'game/' directory found in the archive` | 该 `.zip` 不是 Ren'Py 构建——请传入启动器打出的、含 `game/` 的发行归档 |
+| `the archive holds more than one game build` | 该 `.zip` 里打包了多个构建——先解压，再把 RenMori 指向你要的那一个 |
 | `is already protected` | 目标已含 `renmori.rmc`；请从全新构建（或 `_bak`）重新开始 |
 | `backup <dir>_bak already exists` | 删除它，或传入 `--no-backup`，或用 `-o` 保护一份副本 |
 | `strength 'x' requires the closed renmori plugin` | 将 `--plugin` / `$RENMORI_PLUGIN` 指向插件，或改用 `baseline`（见下文） |

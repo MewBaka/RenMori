@@ -1,5 +1,7 @@
 import json
+import os
 import sys
+import zipfile
 
 import pytest
 
@@ -230,6 +232,69 @@ def test_rpa_is_unpacked(tmp_path, capsys):
     names = {e["name"] for e in json.loads((out / "renmori-manifest.json").read_text())["files"]}
     assert "script.rpyc" in names and "images/bg.png" in names
     assert "content.rpa" not in names
+
+
+def _zip_build(zpath, files, top=None):
+    """Zip a game build {game-relative: bytes}, optionally wrapped in a top folder
+    like a real Ren'Py distribution."""
+    with zipfile.ZipFile(zpath, "w") as z:
+        for rel, data in files.items():
+            arc = ("game/" + rel) if top is None else (top + "/game/" + rel)
+            z.writestr(arc, data)
+
+
+def test_zip_input_is_extracted(tmp_path, capsys):
+    # a .rpa inside the zip must still be unpacked, exercising the whole path
+    make_rpa(str(tmp_path / "content.rpa"), {"script.rpyc": b"not really rpyc"})
+    zpath = tmp_path / "MyGame-1.0-pc.zip"
+    _zip_build(zpath, {"content.rpa": (tmp_path / "content.rpa").read_bytes(),
+                       "images/bg.png": b"\x89PNG" + b"x" * 50}, top="MyGame-1.0-pc")
+    out = tmp_path / "out"
+    rc, res = run(["protect", str(zpath), "-o", str(out)], capsys)
+    assert rc == 0 and res["status"] == "ok"
+    assert (out / "game" / "renmori.rmc").is_file()
+    assert (out / "game" / "renmori.rpe").is_file()
+    assert not (out / "game" / "content.rpa").exists()
+    names = {e["name"] for e in json.loads((out / "renmori-manifest.json").read_text())["files"]}
+    assert "script.rpyc" in names and "images/bg.png" in names
+    # the original archive is untouched
+    assert zpath.is_file()
+
+
+def test_zip_input_default_output_is_sibling_folder(tmp_path, capsys):
+    zpath = tmp_path / "MyGame-1.0-pc.zip"
+    _zip_build(zpath, {"a.png": b"data", "s.rpyc": b"rpyc"}, top="MyGame-1.0-pc")
+    rc, res = run(["protect", str(zpath)], capsys)
+    assert rc == 0 and res["status"] == "ok"
+    assert res["output"] == str(tmp_path / "MyGame-1.0-pc")
+    assert (tmp_path / "MyGame-1.0-pc" / "game" / "renmori.rmc").is_file()
+    assert "backup" not in res  # the .zip is the original; no _bak
+
+
+def test_zip_input_without_top_folder(tmp_path, capsys):
+    # some zips put game/ at the archive root
+    zpath = tmp_path / "flat.zip"
+    _zip_build(zpath, {"a.png": b"data"}, top=None)
+    out = tmp_path / "out"
+    rc, res = run(["protect", str(zpath), "-o", str(out)], capsys)
+    assert rc == 0 and (out / "game" / "renmori.rmc").is_file()
+
+
+def test_zip_without_game_dir_fails(tmp_path, capsys):
+    zpath = tmp_path / "nope.zip"
+    with zipfile.ZipFile(zpath, "w") as z:
+        z.writestr("readme.txt", b"no game here")
+    rc, res = run(["protect", str(zpath), "-o", str(tmp_path / "out")], capsys)
+    assert rc == 2 and res["status"] == "error"
+    assert not (tmp_path / "out").exists()  # cleaned up on failure
+
+
+def test_zip_input_refuses_existing_output(tmp_path, capsys):
+    zpath = tmp_path / "MyGame.zip"
+    _zip_build(zpath, {"a.png": b"data"}, top="MyGame")
+    (tmp_path / "MyGame").mkdir()  # default output already exists
+    rc, res = run(["protect", str(zpath)], capsys)
+    assert rc == 2 and "already exists" in res["message"]
 
 
 def test_default_strength_requires_plugin(tmp_path, monkeypatch):

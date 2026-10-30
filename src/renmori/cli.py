@@ -105,6 +105,8 @@ _MESSAGES = {
                          "zh": "将先备份到 {bak},可随时还原。"},
     "warn_nobak":       {"en": "No backup will be made (--no-backup). This cannot be undone.",
                          "zh": "不会创建备份(--no-backup),此操作无法撤销。"},
+    "warn_from_zip":    {"en": "The source .zip is kept untouched as your original.",
+                         "zh": "源 .zip 保持不变,可作为原件。"},
     "proceed":          {"en": "Proceed? [y/N] ", "zh": "继续? [y/N] "},
     "aborted":          {"en": "Aborted.", "zh": "已取消。"},
     "using_config":     {"en": "using config {path}", "zh": "使用配置 {path}"},
@@ -135,6 +137,7 @@ _MESSAGES = {
                                "from source and drops the protection.",
                          "zh": "不要再对这个文件夹跑 Ren'Py 启动器构建——它会从源码重建并丢掉保护。"},
     "done":             {"en": "Done in {t}s", "zh": "用时 {t}s"},
+    "unzipped":         {"en": "Unzipped {name} -> {out}", "zh": "已解压 {name} -> {out}"},
     "verifying":        {"en": "Verifying {dir}", "zh": "校验 {dir}"},
     "verified":         {"en": "Verified", "zh": "校验通过"},
     "problems_found":   {"en": "Problems found:", "zh": "发现问题:"},
@@ -283,7 +286,7 @@ def main(argv=None):
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("protect", parents=[common], help="protect a built Ren'Py game directory")
-    p.add_argument("game_dir", help="built game directory (contains 'game/')")
+    p.add_argument("game_dir", help="built game directory (contains 'game/'), or a .zip of one")
     p.add_argument("-o", "--output", help="output directory (default: protect in place)")
     p.add_argument("-c", "--config", help="path to renmori.toml (default: autodetect)")
     p.add_argument("--chunk-size", type=int, default=None, help="container chunk size in bytes")
@@ -408,12 +411,85 @@ def _key_label(src):
 
 # --- protect ---------------------------------------------------------------
 
+def _safe_extract(z, dest):
+    """Extract a zip, refusing any member that would escape `dest` (zip-slip)."""
+    dest = pathlib.Path(dest).resolve()
+    for member in z.namelist():
+        target = (dest / member).resolve()
+        if target != dest and not str(target).startswith(str(dest) + os.sep):
+            raise RuntimeError("unsafe path in archive: %s" % member)
+    z.extractall(str(dest))
+
+
+def _find_build_root(root):
+    """Find the Ren'Py build directory (the one holding 'game/') in an extracted
+    archive: the root itself, or a single top-level subfolder (dists usually wrap
+    the build in one). Ambiguity or absence is an error the caller reports."""
+    root = pathlib.Path(root)
+    if (root / "game").is_dir():
+        return root
+    cands = [d for d in sorted(root.iterdir()) if d.is_dir() and (d / "game").is_dir()]
+    if len(cands) == 1:
+        return cands[0]
+    if not cands:
+        raise RuntimeError("no 'game/' directory found in the archive")
+    raise RuntimeError("the archive holds more than one game build (%s); unzip it and "
+                       "point renmori at the one you want" % ", ".join(d.name for d in cands))
+
+
+def _stage_zip(args):
+    """If game_dir is a .zip, extract it, locate the build root inside, and move it
+    to the output directory, then rewrite args to protect that folder in place —
+    the .zip stays as the pristine original, so no backup is made. With no -o the
+    output defaults to a sibling folder named after the archive. Returns the
+    staging temp dir to clean up, or None when the input was not a zip."""
+    p = pathlib.Path(args.game_dir)
+    if not p.is_file() or not zipfile.is_zipfile(str(p)):
+        return None
+
+    out_root = pathlib.Path(args.output).resolve() if args.output else (p.parent / p.stem).resolve()
+    if out_root.exists():
+        raise RuntimeError("output %s already exists" % out_root)
+    out_root.parent.mkdir(parents=True, exist_ok=True)
+
+    staging = pathlib.Path(tempfile.mkdtemp(prefix=".renmori-unzip-", dir=str(out_root.parent)))
+    try:
+        with zipfile.ZipFile(str(p)) as z:
+            _safe_extract(z, staging)
+        build_root = _find_build_root(staging)
+        shutil.move(str(build_root), str(out_root))
+    except Exception:
+        shutil.rmtree(staging, ignore_errors=True)
+        if out_root.exists():
+            shutil.rmtree(out_root, ignore_errors=True)
+        raise
+
+    _note(_t("unzipped", name=p.name, out=out_root))
+    args.game_dir = str(out_root)
+    args.output = None
+    args.no_backup = True
+    args._from_zip = True
+    return staging
+
+
 def cmd_protect(args):
     started = time.monotonic()
+    _banner()
+    staging = None
+    try:
+        staging = _stage_zip(args)
+    except (RuntimeError, OSError, zipfile.BadZipFile) as e:
+        return _fail(str(e))
+    try:
+        return _do_protect(args, started)
+    finally:
+        if staging is not None:
+            shutil.rmtree(staging, ignore_errors=True)
+
+
+def _do_protect(args, started):
     src_root = pathlib.Path(args.game_dir).resolve()
     game_dir = src_root / "game"
-
-    _banner()
 
     if not game_dir.is_dir():
         return _fail("%s has no 'game/' directory" % src_root)
@@ -499,7 +575,12 @@ def cmd_protect(args):
     # Destructive-action notice (in-place only) + confirmation.
     if not args.output:
         _log("  " + _yellow("⚠  ") + _t("warn_delete"))
-        _log("     " + (_t("warn_backup", bak=backup_root) if backup_root else _t("warn_nobak")))
+        if backup_root:
+            _log("     " + _t("warn_backup", bak=backup_root))
+        elif getattr(args, "_from_zip", False):
+            _log("     " + _t("warn_from_zip"))
+        else:
+            _log("     " + _t("warn_nobak"))
         _log()
     if not _confirm(args):
         _log("  " + _t("aborted"))
@@ -704,7 +785,12 @@ def _protect_with_plugin(args, plugin_path, caps, src_root, settings, started):
     _log()
     if not args.output:
         _log("  " + _yellow("⚠  ") + _t("warn_delete"))
-        _log("     " + (_t("warn_backup", bak=backup_root) if backup_root else _t("warn_nobak")))
+        if backup_root:
+            _log("     " + _t("warn_backup", bak=backup_root))
+        elif getattr(args, "_from_zip", False):
+            _log("     " + _t("warn_from_zip"))
+        else:
+            _log("     " + _t("warn_nobak"))
         _log()
     if not _confirm(args):
         _log("  " + _t("aborted"))
