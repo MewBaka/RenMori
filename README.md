@@ -1,25 +1,14 @@
 <div align="center">
 
-![English](https://img.shields.io/badge/README-English-orange?style=for-the-badge) [![简体中文](https://img.shields.io/badge/README-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-lightgrey?style=for-the-badge)](README.zh-CN.md)
+![LOGO](assets/logo/renmori-protector.png)
+
+![For RenPy](https://img.shields.io/badge/For-RenPy-orange?style=for-the-badge&logo=RenPy) ![License](https://img.shields.io/badge/License-RenMori_License-orange?style=for-the-badge) ![English](https://img.shields.io/badge/README-English-orange?style=for-the-badge) [![简体中文](https://img.shields.io/badge/README-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-lightgrey?style=for-the-badge)](README.zh-CN.md) [![日本語](https://img.shields.io/badge/README-%E6%97%A5%E6%9C%AC%E8%AA%9E-lightgrey?style=for-the-badge)](README.ja.md) ![GitHub Repo stars](https://img.shields.io/github/stars/mewbaka/renmori?style=for-the-badge) ![PyPI Downloads](https://img.shields.io/pypi/dm/renmori?style=for-the-badge)
+
+**Full-data protection for commercial Ren'Py visual novels — 100% free**
+
+RenMori takes a Ren'Py 8.x build and produces a protected distribution: every asset — scripts, sprites, CGs, audio, video, fonts, translations, and configuration — is packed into an encrypted container and decrypted only inside the running engine. A game that runs on the player's machine can never be made uncrackable, so RenMori maximizes the cost of extraction — off-the-shelf unpackers and most lazy agents fail outright — but it cannot stop an expert-level reverse. The honest threat model is [here](docs/threat-model.md).
 
 </div>
-
-# RenMori
-
-**Full-data protection for commercial Ren'Py visual novels.** RenMori takes an
-already-built Ren'Py 8.x distribution and produces a protected one: every asset —
-scripts, sprites, CGs, audio, video, fonts, translations, and configuration — is
-packed into an encrypted container and decrypted only inside the running engine.
-Off-the-shelf unpackers and decompilers, and the agents that merely call them,
-fail outright, and every build differs so no single tool works across games.
-
-A game that runs on the player's machine can never be made uncrackable — the
-engine must read its own assets, so the keys ship with it. RenMori does not claim
-otherwise; it raises extraction from "run a tool" to dedicated, per-title,
-per-version expert effort. The honest threat model is in
-[docs/threat-model.md](docs/threat-model.md).
-
-Chinese: [README.zh-CN.md](README.zh-CN.md).
 
 ---
 
@@ -123,3 +112,5 @@ warranty of unbreakability is given — see the license and
 [docs/threat-model.md](docs/threat-model.md).
 
 Full terms and FAQ: *(website coming soon)*.
+
+For licensing questions or technical help, contact: *team@mewbaka.cn*

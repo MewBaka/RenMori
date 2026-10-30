@@ -2,7 +2,7 @@
 
 ![LOGO](assets/logo/renmori-protector.png)
 
-![Static Badge](https://img.shields.io/badge/For-RenPy-orange?style=for-the-badge&logo=RenPy) ![Static Badge](https://img.shields.io/badge/License-RenMori_License-orange?style=for-the-badge) [![English](https://img.shields.io/badge/README-English-lightgrey?style=for-the-badge)](README.md) ![简体中文](https://img.shields.io/badge/README-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-orange?style=for-the-badge) ![GitHub Repo stars](https://img.shields.io/github/stars/mewbaka/renmori?style=for-the-badge) ![PyPI Downloads](https://img.shields.io/pypi/dm/renmori?style=for-the-badge)
+![Static Badge](https://img.shields.io/badge/For-RenPy-orange?style=for-the-badge&logo=RenPy) ![Static Badge](https://img.shields.io/badge/License-RenMori_License-orange?style=for-the-badge) [![English](https://img.shields.io/badge/README-English-lightgrey?style=for-the-badge)](README.md) ![简体中文](https://img.shields.io/badge/README-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-orange?style=for-the-badge) [![日本語](https://img.shields.io/badge/README-%E6%97%A5%E6%9C%AC%E8%AA%9E-lightgrey?style=for-the-badge)](README.ja.md) ![GitHub Repo stars](https://img.shields.io/github/stars/mewbaka/renmori?style=for-the-badge) ![PyPI Downloads](https://img.shields.io/pypi/dm/renmori?style=for-the-badge)
 
 **面向商业 Ren'Py 视觉小说的全量数据保护工具，100% 免费** 
 
@@ -10,7 +10,7 @@ RenMori 支持 Ren'Py 8.x 构建的游戏并为其输出受到保护的发行版
 
 </div>
 
-
+---
 
 ## 一、安装与使用 CLI
 
@@ -77,6 +77,8 @@ cd RenMori && pip install -e .
 **发布**
 
 - [steam-release.zh-CN.md](docs/steam-release.zh-CN.md) —— 发布到 Steam（悬浮窗、DRM、Steamworks）
+
+---
 
 ## 三、授权
 
