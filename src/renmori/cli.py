@@ -26,6 +26,7 @@ import hashlib
 import json
 import os
 import pathlib
+import pickle
 import re
 import shutil
 import subprocess
@@ -33,6 +34,7 @@ import sys
 import tempfile
 import time
 import unicodedata
+import zlib
 import zipfile
 
 from . import __version__
@@ -288,7 +290,8 @@ def main(argv=None):
     p.add_argument("--exclude", action="append", default=[], metavar="GLOB",
                    help="glob of game-relative paths to leave unencrypted (repeatable)")
     p.add_argument("--strength", default=None,
-                   help="protection strength (default: auto — the plugin's strongest, else 'baseline')")
+                   help="protection strength: default is full (the plugin's strongest, and fails "
+                        "without a plugin); 'baseline' for the open format; 'auto' for full-else-baseline")
     p.add_argument("--plugin", default=None,
                    help="path to the closed protection plugin (else $RENMORI_PLUGIN)")
     p.add_argument("--platforms", default=None,
@@ -422,18 +425,31 @@ def cmd_protect(args):
     except RuntimeError as e:
         return _fail(str(e))
 
-    # Discover the closed plugin and settle the strength. `strength` None means
-    # auto: the plugin's strongest offering, else the baseline.
+    # Discover the closed plugin and settle the strength. The default is FULL
+    # protection: with no --strength, the plugin's strongest format is used, and
+    # if no plugin is found the run fails rather than silently shipping the weak
+    # baseline. Baseline is a deliberate opt-in (--strength baseline); `auto`
+    # keeps the old graceful fallback for those who want it.
     plugin_path = _find_plugin(args)
     caps = _query_capabilities(plugin_path) if plugin_path else None
     plugin_strengths = caps.get("strengths", []) if caps else []
-    strength = settings["strength"] or (plugin_strengths[0] if plugin_strengths else "baseline")
+    requested = settings["strength"]  # None unless the user set it
+
+    if requested == "auto":
+        strength = plugin_strengths[0] if plugin_strengths else "baseline"
+    elif requested is None:
+        if not plugin_strengths:
+            return _fail("full protection needs the closed plugin; set RENMORI_PLUGIN or "
+                         "--plugin, or pass --strength baseline for the open baseline format")
+        strength = plugin_strengths[0]
+    else:
+        strength = requested
     settings["strength"] = strength
 
     if strength != "baseline":
         if strength not in plugin_strengths:
             return _fail("strength %r requires the closed renmori plugin; set RENMORI_PLUGIN "
-                         "or pass --plugin (the open tool alone supports 'baseline')" % strength)
+                         "or pass --plugin (or use --strength baseline)" % strength)
         return _protect_with_plugin(args, plugin_path, caps, src_root, settings, started)
 
     try:
@@ -505,15 +521,37 @@ def cmd_protect(args):
     manifest_files = []
     script_count = 0
 
+    # A .rpa archive is unpacked and its entries packed as individual files, so
+    # the engine can still find the scripts and assets once the archive is gone.
+    seen = set()
+
+    def _pack(w, name, data=None, src=None):
+        nonlocal script_count
+        name = normalize_name(name)
+        if name in seen:
+            return  # a loose file duplicated by an archive entry: first wins
+        seen.add(name)
+        if name.lower().endswith(SCRIPT_EXTENSIONS):
+            raw = data if data is not None else pathlib.Path(src).read_bytes()
+            w.add_bytes(name, transform_rpyc(raw, script_key))
+            script_count += 1
+            size = len(raw)
+        elif data is not None:
+            w.add_bytes(name, data)
+            size = len(data)
+        else:
+            w.add_file(name, src)
+            size = os.path.getsize(src)
+        manifest_files.append({"name": name, "size": size})
+
     try:
         with ContainerWriter(str(container_path), master_key, chunk_size=settings["chunk_size"]) as w:
             for abs_path, rel_name in to_pack:
-                if rel_name.lower().endswith(SCRIPT_EXTENSIONS):
-                    w.add_bytes(rel_name, transform_rpyc(abs_path.read_bytes(), script_key))
-                    script_count += 1
+                if rel_name.lower().endswith(".rpa"):
+                    for inner, data in read_rpa(str(abs_path)):
+                        _pack(w, inner, data=data)
                 else:
-                    w.add_file(rel_name, str(abs_path))
-                manifest_files.append({"name": rel_name, "size": abs_path.stat().st_size})
+                    _pack(w, rel_name, src=str(abs_path))
     except Exception as e:  # noqa: BLE001
         return _fail("packing failed: %s" % e, EXIT_RUNTIME)
 
@@ -757,6 +795,36 @@ def _write_plugin_manifest(out_root, resp, settings):
 
 def _excluded(rel_name, patterns):
     return any(fnmatch.fnmatch(rel_name, pat) for pat in patterns)
+
+
+def read_rpa(path):
+    """Yield (game-relative name, bytes) for each entry in a Ren'Py RPA archive
+    (RPA-3.0 or 2.0). A game built with the launcher ships its scripts and assets
+    inside .rpa, so they are unpacked into the container as individual files;
+    otherwise the engine cannot find them once the archive is encrypted. The
+    archive is the developer's own build (trusted input)."""
+    with open(path, "rb") as f:
+        parts = f.readline().split()
+        magic = parts[0]
+        if magic == b"RPA-3.0":
+            index_off, key = int(parts[1], 16), int(parts[2], 16)
+        elif magic == b"RPA-2.0":
+            index_off, key = int(parts[1], 16), 0
+        else:
+            raise RuntimeError("unsupported RPA archive format: %r"
+                               % magic.decode("latin-1", "replace"))
+        f.seek(index_off)
+        index = pickle.loads(zlib.decompress(f.read()))
+        for name, segments in index.items():
+            buf = []
+            for seg in segments:
+                off, length = seg[0] ^ key, seg[1] ^ key
+                prefix = seg[2] if len(seg) > 2 else b""
+                if isinstance(prefix, str):
+                    prefix = prefix.encode("latin-1")
+                f.seek(off)
+                buf.append(prefix + f.read(length))
+            yield name, b"".join(buf)
 
 
 def _partition(game_dir, excludes):

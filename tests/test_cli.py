@@ -15,8 +15,35 @@ def make_game(root, files):
     return root
 
 
+def make_rpa(path, files):
+    """Write a minimal RPA-3.0 archive {name: bytes}, for the unpack tests."""
+    import pickle
+    import zlib
+    key = 0x12345678
+    with open(path, "wb") as f:
+        f.write(b"RPA-3.0 " + b"0" * 16 + b" %08x\n" % key)
+        index = {}
+        for name, data in files.items():
+            off = f.tell()
+            f.write(data)
+            index[name] = [(off ^ key, len(data) ^ key, "")]
+        ioff = f.tell()
+        f.write(zlib.compress(pickle.dumps(index, 2)))
+        f.seek(0)
+        f.write(b"RPA-3.0 %016x %08x\n" % (ioff, key))
+
+
+def _baseline(argv):
+    # Baseline is now opt-in: the default strength is full protection, which needs
+    # the closed plugin these open-tool tests do not have. Inject baseline for a
+    # protect call that does not already set a strength.
+    if argv and argv[0] == "protect" and "--strength" not in argv:
+        return argv + ["--strength", "baseline"]
+    return argv
+
+
 def run(argv, capsys):
-    rc = main(argv)
+    rc = main(_baseline(argv))
     out = capsys.readouterr().out.strip().splitlines()
     result = json.loads(out[-1]) if out else {}
     return rc, result
@@ -93,7 +120,7 @@ def test_output_mode_makes_no_backup(tmp_path, capsys):
 
 def test_quiet_emits_only_json(tmp_path, capsys):
     src = make_game(tmp_path / "g", {"a.png": b"data", "s.rpyc": b"rpyc"})
-    rc = main(["protect", str(src), "-o", str(tmp_path / "p"), "--quiet"])
+    rc = main(_baseline(["protect", str(src), "-o", str(tmp_path / "p"), "--quiet"]))
     cap = capsys.readouterr()
     assert rc == 0
     assert cap.err == ""  # no styled output on stderr
@@ -103,7 +130,7 @@ def test_quiet_emits_only_json(tmp_path, capsys):
 
 def test_lang_zh_localizes_stderr_only(tmp_path, capsys):
     src = make_game(tmp_path / "g", {"a.png": b"data"})
-    rc = main(["protect", str(src), "-o", str(tmp_path / "p"), "--lang", "zh"])
+    rc = main(_baseline(["protect", str(src), "-o", str(tmp_path / "p"), "--lang", "zh"]))
     cap = capsys.readouterr()
     assert rc == 0
     assert "保护完成" in cap.err  # human text is Chinese
@@ -185,3 +212,30 @@ def test_two_builds_are_cryptographically_independent(tmp_path, capsys):
     # Same inputs, but independent per build: different id and different bytes.
     assert container_id(out1) != container_id(out2)
     assert m1["container_sha256"] != m2["container_sha256"]
+
+
+def test_rpa_is_unpacked(tmp_path, capsys):
+    # a game whose files live inside a .rpa must be unpacked into the container,
+    # not packed as an opaque blob (else the engine cannot find them)
+    src = tmp_path / "g"
+    (src / "game").mkdir(parents=True)
+    make_rpa(str(src / "game" / "content.rpa"), {
+        "script.rpyc": b"not really rpyc",
+        "images/bg.png": b"\x89PNG" + b"x" * 50,
+    })
+    out = tmp_path / "out"
+    rc, res = run(["protect", str(src), "-o", str(out)], capsys)
+    assert rc == 0
+    assert not (out / "game" / "content.rpa").exists()
+    names = {e["name"] for e in json.loads((out / "renmori-manifest.json").read_text())["files"]}
+    assert "script.rpyc" in names and "images/bg.png" in names
+    assert "content.rpa" not in names
+
+
+def test_default_strength_requires_plugin(tmp_path, monkeypatch):
+    # default is full protection; with no plugin it fails rather than silently
+    # shipping the weak baseline
+    monkeypatch.delenv("RENMORI_PLUGIN", raising=False)
+    src = make_game(tmp_path / "g", {"script.rpyc": b"x"})
+    rc = main(["protect", str(src), "-o", str(tmp_path / "p")])
+    assert rc == 2

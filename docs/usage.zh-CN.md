@@ -64,7 +64,7 @@ renmori verify ./dist/MyGame-1.0-pc-protected
 | `-c, --config FILE` | — | 自动探测 | 否则取 `<game-dir>/renmori.toml` 或 `./renmori.toml` |
 | `--chunk-size N` | `chunk_size` | 65536 | 容器分块大小（字节） |
 | `--exclude GLOB` | `exclude` | 无 | 匹配到的文件保持不加密（可重复；在配置基础上追加） |
-| `--strength S` | `strength` | `auto` | `auto` 在插件存在时采用其最强格式，否则取 `baseline`；`baseline` 强制使用开源格式；`poly` 需要插件（见下文） |
+| `--strength S` | `strength` | full | 默认为完整保护（插件的最强格式，无插件则失败）；`baseline` 强制使用开源格式；`auto` 为有插件时用完整、否则用基线（见下文） |
 | `--plugin PATH` | — | `$RENMORI_PLUGIN` | 闭源保护插件的路径；启用完整（`poly`）保护 |
 | `--platforms LIST` | `platforms` | 自动检测 | 仅插件：目标平台的逗号分隔列表，否则从构建的 `lib/py3-*` 检测 |
 | `--launcher` | `launcher` | 关 | 仅插件：将密钥绑定到原生启动器并随之分发 |
@@ -168,15 +168,15 @@ python tools/verify_in_renpy.py --sdk /path/to/renpy-8.5.2-sdk --game /path/to/y
 
 ## 基线保护与完整保护
 
-开箱即用时，本开源工具运行**基线**流水线：固定的容器格式，加载器扩展中内嵌一个占位密钥。仅此一项即可挫败 `unrpa`、`unrpyc` 等现成工具，但密钥与读取器以明文随附，因此面对有决心的攻击者并非真正的保护。
-
-**完整保护**——每次构建的结构多态、运行时密钥派生、原生核心，以及可选的原生启动器——是**闭源**组件，以预编译插件形式分发，从不以源码形式提供。插件存在时，`renmori protect` 会发现它并自动启用：
+**完整保护**——每次构建的结构多态、运行时密钥派生、原生核心，以及可选的原生启动器——是**闭源**组件，以预编译插件形式分发，从不以源码形式提供。它是**默认**：`renmori protect` 会发现插件并自动启用,而在无插件时直接失败,而不会悄悄退化为较弱的基线。
 
 ```bash
 export RENMORI_PLUGIN=/path/to/renmori-plugin      # or pass --plugin PATH
 renmori protect ./dist/MyGame-1.0-pc -o ./dist/MyGame-1.0-pc-protected
 ```
 
-使用 `--strength auto`（默认）时会应用插件提供的最强格式；无插件时回退到 `baseline`，而在无插件时显式指定非基线强度会被拒绝。`--platforms` 与 `--launcher` 仅对插件生效。工具与插件之间的进程契约在 [interface.md](interface.md) 中规定；设计说明见 [architecture.md](architecture.md)。
+**基线**流水线——固定的容器格式,加载器扩展中内嵌一个占位密钥——需经 `--strength baseline` 显式启用。它能挫败 `unrpa`、`unrpyc` 等现成工具,但密钥与读取器以明文随附,因此面对有决心的攻击者并非真正的保护。传入 `--strength auto` 可获得"有插件时用完整、否则用基线"的平滑行为。`--platforms` 与 `--launcher` 仅对插件生效,工具与插件之间的进程契约在 [interface.md](interface.md) 中规定。
+
+无论哪条流水线,都能处理用启动器归档构建的游戏:`.rpa` 封包会在保护时被解开,其中的条目作为独立文件打进容器,这样封包消失后引擎仍能找到脚本与素材。
 
 RenMori 面向 **Ren'Py 8.x（Python 3）**。其运行时已在 Linux（CI，无头）与 macOS 的真实 Ren'Py 引擎中验证，Windows 与 Linux 运行时则由各平台上的单元、黄金容器与密钥派生任务加以检验；在 Proton 下的 Steam Deck 运行仍待完成。发行前请在你的目标平台上测试。
