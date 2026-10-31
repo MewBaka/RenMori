@@ -136,8 +136,10 @@ in memory. Players notice nothing.
 - **Don't double-wrap with Steam DRM** (the DRMToolkit executable wrapper) — it
   rewrites the launcher binary, can conflict with runtime self-checks, and is
   weak on its own, whereas RenMori already protects the data layer
-- **The overlay is safe** — RenMori only hooks Ren'Py's file loading, never
-  process/DLL injection, so the Steam overlay works normally
+- **The overlay is safe (default build, without `--launcher`)** — RenMori only
+  hooks Ren'Py's file loading, never process/DLL injection, so the Steam overlay
+  works normally. If you build with `--launcher`, see "Native launcher and Steam"
+  below
 - **Achievements and Cloud saves** go through Ren'Py's Python API and are
   unaffected; `renmori.rmc` is a static file, so Steam's file verification and
   delta updates work normally
@@ -145,6 +147,38 @@ in memory. Players notice nothing.
   RenMori keeps it as plaintext by default (`DEFAULT_KEEP_ON_DISK`) — keeping it
   in the shipped build is harmless, and any other externally-read files can be
   added via `keep_on_disk` in `renmori.toml`
+
+---
+
+## Native launcher (`--launcher`) and Steam
+
+`--launcher` is **opt-in** in 1.2.0. It replaces the game's entry point with the
+RenMori native launcher, which performs boot attestation and then re-launches the
+real engine. That re-launch changes the process model the Steam overlay and the
+Steamworks SDK rely on, so its Steam compatibility is tracked per OS:
+
+| OS | Re-launch | Status |
+|----|-----------|--------|
+| macOS | `execv` (same PID, inherited env) | **Verified** — the overlay re-attaches to the real engine and `SteamAPI_Init` keeps its app context; the overlay opens over the game and gameplay is smooth |
+| Windows | `_spawnv` (engine runs as a child process) | **Not yet tested** — the child-process model is the case most likely to affect overlay injection; `SteamAPI_Init` should still inherit the app context |
+| Linux | `execv` (same as macOS) | **Not yet tested** — expected to behave like macOS |
+
+> **Help wanted — Windows.** The native-launcher + Steam combination has **not been
+> confirmed on Windows**: whether the Steam overlay (Shift+Tab) attaches to the
+> re-launched engine, and whether achievements / Cloud saves via the Steamworks SDK
+> work, are **untested**. If you ship a `--launcher` build to Steam on Windows,
+> please report back whether the overlay and achievements work. Until then, prefer
+> the **default (no-`--launcher`) build** for Steam on Windows, or keep `--launcher`
+> to macOS.
+
+In 1.2.0 the launcher is **auto-installed only into the macOS `.app`**. For
+Windows/Linux the launcher ships as a separate file and must be wired in by hand
+(rename the real engine to `<name>.renmori_real` and put the launcher at the entry
+point), so a `--launcher` build is turn-key on macOS only for now.
+
+The overlay rendering itself can feel heavy — that is Steam's own CEF layer (more
+so when testing through *Add a Non-Steam Game* rather than a real store app), not
+RenMori.
 
 ---
 
@@ -157,3 +191,5 @@ in memory. Players notice nothing.
 - [ ] Per-OS launch options set (`the_question.exe` / `.sh` / `.app`)
 - [ ] No Steam DRM wrapper applied
 - [ ] Did **not** re-run the launcher on the protected folder
+- [ ] If using `--launcher`: verified on macOS only — Steam overlay/SDK on Windows
+      is **untested** (see "Native launcher and Steam")

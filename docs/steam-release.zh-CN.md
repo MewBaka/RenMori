@@ -121,9 +121,27 @@ steamcmd +login YOUR_ACCOUNT +run_app_build "D:\steam\app_build_YOUR_APPID.vdf" 
 ## Steam 相关要点
 
 - **请勿与 Steam DRM 二次包装**（DRMToolkit 可执行文件包装器）——它会重写启动器二进制、可能与运行时自检冲突，且自身防护薄弱，而 RenMori 已保护数据层
-- **覆盖层（overlay）是安全的**——RenMori 仅挂钩 Ren'Py 的文件加载，从不进行进程 / DLL 注入，因此 Steam 覆盖层正常工作
+- **覆盖层（overlay）是安全的（默认构建，不加 `--launcher`）**——RenMori 仅挂钩 Ren'Py 的文件加载，从不进行进程 / DLL 注入，因此 Steam 覆盖层正常工作；若使用 `--launcher`，见下方"原生 launcher 与 Steam"
 - **成就与云存档**经由 Ren'Py 的 Python API，不受影响；`renmori.rmc` 是静态文件，因此 Steam 的文件校验与增量更新正常工作
 - **`steam_appid.txt`** 由 Steam SDK 在 `renpy.loader` 之外读取，故 RenMori 默认将其保持为明文（`DEFAULT_KEEP_ON_DISK`）——将其保留在发行构建中无害，其他由外部读取的文件可通过 `renmori.toml` 中的 `keep_on_disk` 添加
+
+---
+
+## 原生 launcher（`--launcher`）与 Steam
+
+`--launcher` 在 1.2.0 中是**可选项（默认不开）**，它把游戏入口替换为 RenMori 原生 launcher——先做启动认证、再重启真正的引擎，这个重启改变了 Steam 覆盖层与 Steamworks SDK 所依赖的进程模型，因此其 Steam 兼容性分平台记录：
+
+| 平台 | 重启方式 | 状态 |
+|----|----------|--------|
+| macOS | `execv`（同 PID、继承环境） | **已验证**——覆盖层重新附着到真引擎、`SteamAPI_Init` 保持其 app context；overlay 能盖在游戏上、gameplay 流畅 |
+| Windows | `_spawnv`（引擎作为子进程运行） | **尚未测试**——子进程模型最可能影响 overlay 注入；`SteamAPI_Init` 应仍能继承 app context |
+| Linux | `execv`（同 macOS） | **尚未测试**——预期与 macOS 一致 |
+
+> **求反馈——Windows。** 原生 launcher + Steam 的组合**尚未在 Windows 上确认**：Steam 覆盖层（Shift+Tab）能否附着到被重启的引擎、以及经 Steamworks SDK 的成就 / 云存档是否可用，**均未经测试**。若你把 `--launcher` 构建发布到 Windows 平台的 Steam，请反馈 overlay 与成就是否正常。在确认之前，Windows 上的 Steam 请优先使用**默认（不加 `--launcher`）构建**，或仅对 macOS 启用 `--launcher`。
+
+另外：1.2.0 中 launcher **仅自动装配进 macOS 的 `.app`**，Windows/Linux 下 launcher 以独立文件随包、需手动接入（把真引擎改名为 `<name>.renmori_real`、并把 launcher 放到入口位置），因此目前 `--launcher` 构建只有 macOS 开箱即用。
+
+覆盖层本身的渲染可能显得卡顿——那是 Steam 自带的 CEF 层（用"添加非 Steam 游戏"测试时尤甚，不同于正式商店 App），与 RenMori 无关。
 
 ---
 
@@ -136,3 +154,4 @@ steamcmd +login YOUR_ACCOUNT +run_app_build "D:\steam\app_build_YOUR_APPID.vdf" 
 - [ ] 已按操作系统设置启动选项（`the_question.exe` / `.sh` / `.app`）
 - [ ] 未应用 Steam DRM 包装器
 - [ ] **未**对受保护的文件夹重新运行启动器
+- [ ] 若使用 `--launcher`：仅在 macOS 上验证过——Windows 的 Steam 覆盖层/SDK **尚未测试**（见"原生 launcher 与 Steam"）
