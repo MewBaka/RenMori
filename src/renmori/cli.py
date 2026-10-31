@@ -79,7 +79,7 @@ PLUGIN_INTERFACE = 1
 #   RENMORI_NO_DOWNLOAD=1     never auto-download (fail/fall back instead)
 #   RENMORI_PLUGIN_BASE_URL   where <asset> and SHA256SUMS live (default: the release)
 #   RENMORI_PLUGIN_TAG        release tag to pull (default: PLUGIN_RELEASE_TAG)
-PLUGIN_RELEASE_TAG = "plugin-v1.0.0"
+PLUGIN_RELEASE_TAG = "plugin-v1.1.0"
 PLUGIN_RELEASE_BASE = "https://github.com/MewBaka/RenMori/releases/download"
 _PLUGIN_ASSET = {
     "linux": "renmori-plugin-linux-x64",
