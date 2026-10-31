@@ -45,8 +45,8 @@ Scripts are discovered at startup, before any game `.rpy` code runs, so a normal
 Ren'Py base dir, `game/`, and `game/libs`, **before** `renpy.loader.index_files()`
 and before the script is loaded.
 
-RenMori ships its runtime as `game/renmori.rpe`. (In M2 this moves into the
-native launcher; `.rpe` is also an attacker injection point and must be locked
+RenMori ships its runtime as `game/renmori.rpe`. (A later version is planned
+to move this into the native launcher; `.rpe` is also an attacker injection point and must be locked
 down to our signed extension only.)
 
 ## 4. The return type matters: `RWopsIO` and the reopen trap

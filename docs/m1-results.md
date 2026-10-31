@@ -40,7 +40,7 @@ This is the reference reader; the shipping native decryptor removes the per-chun
 
 ## Known gaps / next
 
-- `renpy.exists()` (disk-only `transfn`) returns False for containerized files; a patch is prepared should any project require it
+- ~~`renpy.exists()` (disk-only `transfn`) returns False for containerized files~~ — resolved in M4: it now also consults the container (`_install_exists_fallback`, see [m4.md](m4.md))
 - the baseline placeholder key is embedded in `autorun.py`; runtime key derivation is the closed component
-- the baseline script layer still ships standard `.rpyc` (encrypted at rest); the custom AST format is the closed polymorphism layer
+- ~~the baseline script layer still ships standard `.rpyc`~~ — superseded by M2: the baseline now replaces each `.rpyc` pickle payload with AES-GCM ciphertext under an independent script key (see [script-layer.md](script-layer.md)); the custom AST format remains the closed polymorphism layer
 - the windowed perceptual performance benchmark (frame time) is tracked in the benchmark harness

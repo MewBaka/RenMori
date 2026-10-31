@@ -38,6 +38,13 @@ The realistic levers, in order of value:
 4. **No plaintext on disk** — at no point is any file, fonts included, left
    decrypted on the filesystem
 
+Verification status of lever 1: `unrpa`, `unrpyc` (including `--try-harder`),
+`rpycdec`, and planted on-disk scripts are covered by the records in
+[m1-results.md](m1-results.md) and [script-layer.md](script-layer.md).
+`rpatool`, `RenPack`, and `RenpyEx` have not yet been run against a protected
+build; they read the same RPA archives and `.rpyc` files, which no longer exist
+on disk in a protected build.
+
 ## Attacks RenMori does NOT stop
 
 State these plainly to customers:
@@ -63,5 +70,5 @@ and Steam-Deck/Proton goals.
 > per-version expert effort. It does not and cannot make a game uncrackable.
 
 Anything stronger than that is not supportable and must not appear in docs,
-README, or marketing. The EULA carries a matching no-warranty-of-unbreakability
-clause.
+README, or marketing. The RenMori License (`../LICENSE`) carries a matching
+no-warranty and no-liability clause.

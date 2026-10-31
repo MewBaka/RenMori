@@ -4,8 +4,19 @@ RenMori is a **build-time tool** plus a **native runtime core**. It takes an
 already-built Ren'Py 8.x (Python 3) distribution build and produces a protected
 one. No game source changes are required.
 
-A native launcher is only one of four layers. The others — assets, scripts,
-engine — are where the actual protection lives.
+A native launcher is only one of five layers. The others — assets, scripts,
+engine, and per-build polymorphism — are where the actual protection lives.
+
+> **Status.** This document describes the target design. The shipped open
+> baseline differs in places: the runtime loads as a Ren'Py extension
+> (`game/renmori.rpe`) rather than through a native launcher, scripts ship as
+> `.rpyc` whose pickle payload is AES-GCM-encrypted under an independent key
+> rather than in a custom AST format, and decryption runs through a Python
+> reference reader that calls the platform's AES via `ctypes`. Per-build
+> polymorphism, runtime key derivation, and the native launcher belong to the
+> closed plugin. For what has been delivered and verified, see
+> [m1-results.md](m1-results.md), [script-layer.md](script-layer.md), and
+> [m4.md](m4.md).
 
 ## Global first principle: performance wins
 
@@ -26,7 +37,7 @@ weakened, never the reverse. Concretely:
   unprotected one in frame time, scene transitions, and CG/video playback; if a
   measure cannot meet that, the measure goes, not the performance
 
-## The four layers
+## The five layers
 
 ### 1. Assets (every file, fonts included)
 
@@ -64,7 +75,8 @@ weakened, never the reverse. Concretely:
   stray `.rpy` or `.rpyc` files dropped into the game directory are refused,
   which blocks `un.rpyc`-style injection decompilers
 - Release builds disable the developer console, developer mode, and the
-  data-exporting CLI subcommands (compile, lint, dialogue export, …)
+  data-exporting CLI subcommands (`compile`, `dialogue`, `translate`,
+  `add_from`, `merge_strings`); `lint` and `run` stay available
 
 ### 4. Native launcher (the shell)
 
@@ -116,7 +128,8 @@ format).
   reversible, so closing it only raises the bar
 
 **Delivery:** the open CLI invokes the closed precompiled binary at build time.
-It is CI-friendly, offline-capable, and fits free distribution. The two
+It is CI-friendly, runs offline once the plugin is provisioned, and fits free
+distribution. The two
 communicate over a **stable, documented process interface** (CLI over
 stdin/stdout, or local IPC: input is the build-artifact path plus config, output
 is the protected artifact plus manifest). The interface is open; the
@@ -222,19 +235,27 @@ if measured to have no perceptible performance impact.
 ## Milestones
 
 - **M0** — this documentation
-- **M1** — asset-layer proof of concept (Windows): encrypted container and loader
-  takeover; images, audio, video, and fonts load; `unrpa`, `rpatool`, `RenPack`,
-  and `RenpyEx` all fail; the protected-vs-unprotected performance benchmark on a
-  CG- and video-heavy sample passes
-- **M2** — script and engine layers: custom AST format, signed-whitelist loading,
-  release lockdown, and refusal of injected scripts
+- **M1** — asset-layer proof of concept (target platform Windows; verified on
+  macOS/arm64): encrypted container and loader takeover; images, audio, video,
+  and fonts load; `unrpa` fails and no `.rpyc` or `.rpy` remains on disk; the
+  windowed frame-time benchmark is tracked separately — see
+  [m1-results.md](m1-results.md)
+- **M2** — script and engine layers: script payload encryption under an
+  independent key, refusal of on-disk scripts, and release lockdown (the custom
+  AST format is part of the closed plugin) — see
+  [script-layer.md](script-layer.md)
 - **M3** — single-command CLI and CI: a standard Ren'Py artifact in, a
   configuration file, exit codes, a build manifest, and a GitHub Actions sample
 - **M4** — per-build polymorphism; macOS (automatic ad-hoc signing, optional
   notarization) and Linux/Steam Deck launchers; verification of the Steam
-  overlay, Steamworks, and Proton/Steam Deck
+  overlay, Steamworks, and Proton/Steam Deck — see [m4.md](m4.md) for what the
+  open baseline delivers and what is closed or pending hardware
 
 ## Verification
+
+These are the target acceptance criteria. Current results are recorded in
+[m1-results.md](m1-results.md), [script-layer.md](script-layer.md), and
+[m4.md](m4.md).
 
 - **Functional** — the protected sample game runs and completes on all three
   platforms, with every asset and all story content correct

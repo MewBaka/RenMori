@@ -7,10 +7,12 @@
 
 [protect]
 
-# Protection strength. "auto" uses the closed plugin's strongest offering when a
-# plugin is available (see docs/interface.md), and the open baseline otherwise.
-# "baseline" forces the open format; "poly" requires the plugin.
-strength = "auto"
+# Protection strength. Leave it unset for full protection: the closed plugin's
+# strongest offering, failing when no plugin is available (see docs/interface.md).
+# "auto" uses the plugin when available and the open baseline otherwise.
+# "baseline" forces the open format and never downloads the plugin; a strength the
+# plugin declares, such as "poly", requires the plugin.
+# strength = "auto"
 
 # Disable the developer console, developer mode, and data-export subcommands in
 # the protected build. Recommended on for a release.

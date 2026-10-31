@@ -42,7 +42,7 @@ M1 交付并验证了基线资产层：一个取代 Ren'Py RPA 封包的加密�
 
 ## 已知缺口 / 后续
 
-- `renpy.exists()`（仅查磁盘的 `transfn`）对容器内文件返回 False；若有项目需要，已备好补丁
+- ~~`renpy.exists()`（仅查磁盘的 `transfn`）对容器内文件返回 False~~——已在 M4 中解决：它现在也会查询容器（`_install_exists_fallback`，参见 [m4.zh-CN.md](m4.zh-CN.md)）
 - 基线占位密钥嵌入在 `autorun.py` 中；运行时密钥派生属于闭源组件
-- 基线脚本层仍发行标准 `.rpyc`（静态加密）；自定义 AST 格式属于闭源多态层
+- ~~基线脚本层仍发行标准 `.rpyc`~~——已被 M2 取代：基线现以独立脚本密钥下的 AES-GCM 密文替换每个 `.rpyc` 的 pickle 载荷（参见 [script-layer.zh-CN.md](script-layer.zh-CN.md)）；自定义 AST 格式仍属于闭源多态层
 - 窗口化的感知性能基准（帧时间）在基准测试框架中追踪

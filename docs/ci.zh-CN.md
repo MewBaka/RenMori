@@ -2,7 +2,7 @@ English version: [ci.md](ci.md)
 
 # CLI 与 CI 集成（M3）
 
-RenMori 是作用于标准 Ren'Py 构建产物之上的单条构建期命令——不改动游戏源码，不联网，可离线使用。
+RenMori 是作用于标准 Ren'Py 构建产物之上的单条构建期命令，不改动游戏源码。默认的完整保护使用闭源插件，插件首次使用时从公开发布页下载一次，此后从缓存读取；完全离线的运行环境参见[保护强度与插件](#保护强度与插件)。
 
 ## 命令
 
@@ -37,10 +37,13 @@ stdout 的最后一行始终是一个 JSON 对象（`{"status": "ok", …}` 或 
 | `-c, --config FILE` | — | 自动探测 | 否则取 `<game-dir>/renmori.toml` 或 `./renmori.toml` |
 | `--chunk-size N` | `chunk_size` | 65536 | 容器分块大小 |
 | `--exclude GLOB` | `exclude` | 无 | 匹配到的文件保持不加密（可重复；CLI 在配置基础上追加） |
-| `--strength S` | `strength` | `baseline` | 开源工具：仅 `baseline` |
+| `--strength S` | `strength` | 完整保护 | 未设置时使用插件声明的最强强度（无插件时失败）；`auto` 有插件时完整保护、否则基线；`baseline` 为开源格式，从不下载插件 |
+| `--plugin PATH` | — | 自动查找 | 闭源插件路径（否则依次取 `RENMORI_PLUGIN`、缓存、下载） |
+| `--platforms LIST` | `platforms` | 自动探测 | 仅插件：以逗号分隔的目标平台列表 |
+| `--launcher` | `launcher` | 关 | 仅插件：将密钥绑定到原生启动器并随附 |
 | `--no-lockdown` | `lockdown` | 开 | 保持 console/developer/export 处于启用状态 |
 | `--no-backup` | — | 关 | 原地保护时跳过默认的 `<dir>_bak` 复制（对 `-o` 无效） |
-| `--keep-plaintext` | `keep_plaintext` | 关 | 调试用 |
+| `--keep-plaintext` | `keep_plaintext` | 关 | 调试用（仅基线） |
 | `-y, --yes` | — | 关 | 跳过保护前的确认提示 |
 | `--no-hints` | — | 关 | 成功后不打印 “create a release build” 指引 |
 | `--lang {auto,en,zh}` | — | `auto` | 面向用户的输出语言（亦可用 `RENMORI_LANG`）；`auto` 跟随系统区域设置 |
@@ -49,7 +52,15 @@ stdout 的最后一行始终是一个 JSON 对象（`{"status": "ok", …}` 或 
 
 配置文件参见 [`examples/renmori.toml`](../examples/renmori.toml)。
 
+## 保护强度与插件
+
+未设置 `strength` 时，`protect` 使用闭源插件声明的最强强度；若无可用插件则**失败**（退出码 2），而不会静默地以较弱的基线格式发行。`--strength auto` 保留“有插件则完整保护、否则基线”的回退行为；`--strength baseline` 强制使用开源格式，且从不下载插件。
+
+插件的查找顺序为：`--plugin`、`RENMORI_PLUGIN`、本地缓存（`~/.cache/renmori/plugin/<tag>`，Windows 上为 `%LOCALAPPDATA%\renmori\plugin\<tag>`），最后从公开发布页下载并依据 `SHA256SUMS` 校验。CI 中下载无需确认。在多次运行之间缓存该目录可避免重复下载。离线运行环境应预先放置插件并以 `RENMORI_PLUGIN` 指向它，或设置 `RENMORI_NO_DOWNLOAD=1` 禁止任何下载。`RENMORI_PLUGIN_BASE_URL` 与 `RENMORI_PLUGIN_TAG` 分别用于指定镜像地址与发布标签。
+
 ## CI 中的密钥
+
+`[keys]` 部分**仅适用于基线格式**。闭源插件自行派生密钥并忽略该部分，因此在默认的完整保护下，下述密钥环境变量不起作用。
 
 默认情况下，`protect` 为每次构建生成一个全新的随机主密钥和一个**独立**的脚本密钥，内嵌于加载器扩展（基线占位——闭源运行时改为派生这些密钥）。若要自行管理密钥，请将 RenMori 指向持有 64 位十六进制字符（32 字节）密钥的环境变量：
 
@@ -63,7 +74,7 @@ script_env = "RENMORI_SCRIPT_KEY"
 
 ## GitHub Actions
 
-参见 [`examples/github-actions-protect.yml`](../examples/github-actions-protect.yml)：构建 → `renmori protect` → `renmori verify` → 上传产物，密钥取自 `secrets`。
+参见 [`examples/github-actions-protect.yml`](../examples/github-actions-protect.yml)：构建 → `renmori protect` → `renmori verify` → 上传产物，并在多次运行之间缓存插件。
 
 ## 针对真实引擎的端到端校验（可选）
 
