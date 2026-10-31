@@ -199,4 +199,4 @@ renmori protect ./dist/MyGame-1.0-pc -o ./dist/MyGame-1.0-pc-protected
 
 无论哪条流水线,都能处理用启动器归档构建的游戏:`.rpa` 封包会在保护时被解开,其中的条目作为独立文件打进容器,这样封包消失后引擎仍能找到脚本与素材。
 
-RenMori 面向 **Ren'Py 8.x（Python 3）**。其运行时已在 Linux（CI，无头）与 macOS 的真实 Ren'Py 引擎中验证，Windows 与 Linux 运行时则由各平台上的单元、黄金容器与密钥派生任务加以检验；在 Proton 下的 Steam Deck 运行仍待完成。发行前请在你的目标平台上测试。
+RenMori 面向 **Ren'Py 8.x（Python 3）**。其运行时已在 Windows、Linux（CI，无头）与 macOS 的真实 Ren'Py 引擎中验证，各平台上亦运行单元、黄金容器与密钥派生任务；在 Proton 下的 Steam Deck 运行仍待完成。发行前请在你的目标平台上测试。

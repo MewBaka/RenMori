@@ -239,7 +239,7 @@ container as individual files, so the engine still finds the scripts and assets
 once the archive is gone.
 
 RenMori targets **Ren'Py 8.x (Python 3)**. The runtime is verified in the actual
-Ren'Py engine on Linux (CI, headless) and macOS, and the Windows and Linux
-runtimes are exercised by the unit, golden-container, and key-derivation jobs on
-each platform; a run on Steam Deck under Proton is still pending. Test on your
+Ren'Py engine on Windows, Linux (CI, headless), and macOS, and the unit,
+golden-container, and key-derivation jobs run on each platform; a run on Steam
+Deck under Proton is still pending. Test on your
 target platform before shipping.
