@@ -2,7 +2,7 @@
 
 ![LOGO](assets/logo/renmori-protector.png)
 
-![For RenPy](https://img.shields.io/badge/For-RenPy-orange?style=for-the-badge&logo=RenPy) ![License](https://img.shields.io/badge/License-RenMori_License-orange?style=for-the-badge) [![English](https://img.shields.io/badge/README-English-lightgrey?style=for-the-badge)](README.md) [![简体中文](https://img.shields.io/badge/README-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-lightgrey?style=for-the-badge)](README.zh-CN.md) ![日本語](https://img.shields.io/badge/README-%E6%97%A5%E6%9C%AC%E8%AA%9E-orange?style=for-the-badge) ![GitHub Repo stars](https://img.shields.io/github/stars/mewbaka/renmori?style=for-the-badge) ![PyPI Downloads](https://img.shields.io/pypi/dm/renmori?style=for-the-badge)
+![For RenPy](https://img.shields.io/badge/For-RenPy-orange?style=for-the-badge&logo=RenPy) ![License](https://img.shields.io/badge/License-RenMori_License-orange?style=for-the-badge) [![公式サイト](https://img.shields.io/badge/%E5%85%AC%E5%BC%8F%E3%82%B5%E3%82%A4%E3%83%88-renmori.mewbaka.cn-orange?style=for-the-badge)](https://renmori.mewbaka.cn/ja/) [![English](https://img.shields.io/badge/README-English-lightgrey?style=for-the-badge)](README.md) [![简体中文](https://img.shields.io/badge/README-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-lightgrey?style=for-the-badge)](README.zh-CN.md) ![日本語](https://img.shields.io/badge/README-%E6%97%A5%E6%9C%AC%E8%AA%9E-orange?style=for-the-badge) ![GitHub Repo stars](https://img.shields.io/github/stars/mewbaka/renmori?style=for-the-badge) ![PyPI Downloads](https://img.shields.io/pypi/dm/renmori?style=for-the-badge)
 
 **商用 Ren'Py ビジュアルノベル向けの全データ保護ツール、100% 無料**
 
