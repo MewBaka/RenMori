@@ -55,11 +55,16 @@ def run(argv, capsys):
 
 
 @pytest.fixture(autouse=True)
-def _offline(monkeypatch):
-    # Never let a test reach the real plugin release. The download tests opt back
-    # in with a local file:// stand-in (see the plugin_env fixture).
+def _offline(monkeypatch, tmp_path_factory):
+    # Never let a test reach the real plugin release, nor a plugin already cached
+    # on the dev machine (~/.cache/renmori) — point the cache at a throwaway dir
+    # so the "no plugin available" tests hold anywhere. The download tests opt
+    # back in with a local file:// stand-in (see the plugin_env fixture).
     monkeypatch.setenv("RENMORI_NO_DOWNLOAD", "1")
     monkeypatch.delenv("RENMORI_PLUGIN", raising=False)
+    cache = str(tmp_path_factory.mktemp("renmori-cache"))
+    monkeypatch.setenv("XDG_CACHE_HOME", cache)
+    monkeypatch.setenv("LOCALAPPDATA", cache)
 
 
 def test_protect_and_verify(tmp_path, capsys):
@@ -359,6 +364,37 @@ def test_rpy_source_is_stripped_not_shipped(tmp_path, capsys):
     assert "script.rpyc" in names
     assert "orphan.rpy" in names and not (out / "game" / "orphan.rpy").exists()
     assert run(["verify", str(out)], capsys)[0] == 0
+
+
+def test_safe_extract_restores_exec_bit(tmp_path):
+    # ZipFile.extractall drops the stored exec bit, which would leave the mac
+    # .app launcher and the .sh non-executable -> "the app can't be opened".
+    zpath = tmp_path / "a.zip"
+    with zipfile.ZipFile(zpath, "w") as z:
+        exe = zipfile.ZipInfo("App.app/Contents/MacOS/App")
+        exe.external_attr = 0o755 << 16
+        z.writestr(exe, b"#!/bin/sh\necho hi\n")
+        z.writestr("App.app/Contents/Resources/data.txt", b"plain")
+    dest = tmp_path / "out"
+    dest.mkdir()
+    with zipfile.ZipFile(zpath) as z:
+        cli._safe_extract(z, dest)
+    launcher = dest / "App.app" / "Contents" / "MacOS" / "App"
+    assert os.access(launcher, os.X_OK)
+    assert launcher.stat().st_mode & 0o111
+    assert (dest / "App.app" / "Contents" / "Resources" / "data.txt").read_bytes() == b"plain"
+
+
+def test_safe_extract_blocks_zip_slip(tmp_path):
+    zpath = tmp_path / "evil.zip"
+    with zipfile.ZipFile(zpath, "w") as z:
+        z.writestr("../escape.txt", b"x")
+    dest = tmp_path / "out"
+    dest.mkdir()
+    with zipfile.ZipFile(zpath) as z:
+        with pytest.raises(RuntimeError):
+            cli._safe_extract(z, dest)
+    assert not (tmp_path / "escape.txt").exists()
 
 
 def test_default_strength_requires_plugin(tmp_path, monkeypatch):

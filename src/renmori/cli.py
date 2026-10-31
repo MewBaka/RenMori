@@ -307,6 +307,12 @@ def _confirm(args):
 
 # --- argument parsing ------------------------------------------------------
 
+def cmd_gui(args):
+    """Launch the Tkinter front-end (imported lazily so the CLI never needs it)."""
+    from . import gui
+    return gui.run(lang=_LANG)
+
+
 def main(argv=None):
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--lang", choices=("auto", "en", "zh"), default="auto",
@@ -353,6 +359,9 @@ def main(argv=None):
     v = sub.add_parser("verify", parents=[common], help="check a protected build against its manifest")
     v.add_argument("protected_dir", help="a directory produced by 'renmori protect'")
     v.set_defaults(func=cmd_verify)
+
+    sub.add_parser("gui", parents=[common],
+                   help="launch the graphical interface (Tkinter)").set_defaults(func=cmd_gui)
 
     args = parser.parse_args(argv)
 
@@ -449,13 +458,20 @@ def _key_label(src):
 # --- protect ---------------------------------------------------------------
 
 def _safe_extract(z, dest):
-    """Extract a zip, refusing any member that would escape `dest` (zip-slip)."""
+    """Extract a zip, refusing any member that would escape `dest` (zip-slip) and
+    restoring each entry's stored Unix permissions. `ZipFile.extractall` drops the
+    executable bit, which would leave the mac `.app` launcher (Contents/MacOS/*)
+    and the `.sh` launcher non-executable, so the distribution can no longer be
+    started ("the application can't be opened")."""
     dest = pathlib.Path(dest).resolve()
-    for member in z.namelist():
-        target = (dest / member).resolve()
+    for info in z.infolist():
+        target = (dest / info.filename).resolve()
         if target != dest and not str(target).startswith(str(dest) + os.sep):
-            raise RuntimeError("unsafe path in archive: %s" % member)
-    z.extractall(str(dest))
+            raise RuntimeError("unsafe path in archive: %s" % info.filename)
+        z.extract(info, str(dest))
+        mode = (info.external_attr >> 16) & 0o7777
+        if mode and not info.is_dir():
+            os.chmod(target, mode)
 
 
 def _find_build_root(root):
