@@ -4,6 +4,7 @@ English version: [usage.md](usage.md)
 
 `renmori` 命令行工具用于保护**已构建**的 Ren'Py 8.x（Python 3）发行版构建。它不会改动游戏源码——你应在 Ren'Py 启动器 *Build Distributions* 的输出上运行它。
 
+- 关于图形界面（`renmori gui`），参见 [gui.zh-CN.md](gui.zh-CN.md)
 - 关于 CI 流水线与密钥管理，参见 [ci.md](ci.md)
 - 关于发布到 Steam，参见 [steam-release.md](steam-release.md)
 - 关于配置文件，参见 [`examples/renmori.toml`](../examples/renmori.toml)
@@ -59,6 +60,10 @@ renmori verify ./dist/MyGame-1.0-pc-protected
 
 依据受保护构建自身的 `renmori-manifest.json` 重新校验它：容器哈希、必需文件是否齐全、磁盘上是否不残留明文 `.rpa`/`.rpyc`/`.rpy`。可用作 CI 门禁。
 
+### `renmori gui`
+
+打开基于 Tkinter 的图形界面，在窗口中完成 `protect`、`verify` 与 `renmori.toml` 编辑，需要 Tkinter 与可用的图形显示，详见 [gui.zh-CN.md](gui.zh-CN.md)。
+
 ---
 
 ## 选项（`protect`）
@@ -79,7 +84,7 @@ renmori verify ./dist/MyGame-1.0-pc-protected
 | `-y, --yes` | — | 关 | 跳过保护前的确认提示 |
 | `--no-hints` | — | 关 | 成功后不打印 “package & publish” 指引 |
 
-## 通用选项（两条命令均适用）
+## 通用选项（所有命令均适用）
 
 | 参数 | 默认值 | 说明 |
 |------|---------|-------|

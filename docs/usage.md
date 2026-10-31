@@ -4,6 +4,7 @@ The `renmori` command-line tool protects a **built** Ren'Py 8.x (Python 3)
 distribution build. It makes no changes to your game's source — you run it on the
 output of the Ren'Py launcher's *Build Distributions*.
 
+- For the graphical interface (`renmori gui`), see [gui.md](gui.md)
 - For CI pipelines and key management, see [ci.md](ci.md)
 - For publishing to Steam, see [steam-release.md](steam-release.md)
 - For the config file, see [`examples/renmori.toml`](../examples/renmori.toml)
@@ -73,6 +74,11 @@ Re-check a protected build against its `renmori-manifest.json`: container hash,
 required files present, and no plaintext `.rpa`/`.rpyc`/`.rpy` left on disk. Use
 it as a CI gate.
 
+### `renmori gui`
+
+Open the Tkinter graphical interface, which runs `protect` and `verify` for you and
+edits `renmori.toml`; it needs Tkinter and a display, see [gui.md](gui.md).
+
 ---
 
 ## Options (`protect`)
@@ -93,7 +99,7 @@ it as a CI gate.
 | `-y, --yes` | — | off | skip the pre-protect confirmation prompt |
 | `--no-hints` | — | off | don't print the "package & publish" guidance on success |
 
-## Common options (both commands)
+## Common options (all commands)
 
 | Flag | Default | Notes |
 |------|---------|-------|
