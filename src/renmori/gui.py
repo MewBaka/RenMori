@@ -37,7 +37,7 @@ _L = {
         "options": "Options", "strength": "Strength",
         "platforms": "Platforms", "auto": "auto-detect",
         "lockdown": "Lockdown (disable console/developer/export)",
-        "launcher": "Bind a native launcher (--launcher)",
+        "launcher": "Native launcher (on by default; uncheck for --no-launcher)",
         "chunk": "Chunk size", "exclude": "Exclude globs (one per line)",
         "keep_on_disk": "Keep on disk (one per line)",
         "no_backup": "No backup (in-place)", "keep_plaintext": "Keep plaintext (debug)",
@@ -63,7 +63,7 @@ _L = {
         "options": "选项", "strength": "强度",
         "platforms": "目标平台", "auto": "自动检测",
         "lockdown": "锁定（关闭 console/developer/导出）",
-        "launcher": "绑定原生启动器（--launcher）",
+        "launcher": "原生启动器（默认开启；取消勾选即 --no-launcher）",
         "chunk": "分块大小", "exclude": "排除 glob（每行一个）",
         "keep_on_disk": "保留在磁盘（每行一个）",
         "no_backup": "不备份（原地）", "keep_plaintext": "保留明文（调试）",
@@ -104,8 +104,8 @@ def build_protect_args(o):
         args += ["--plugin", o["plugin"]]
     if o.get("platforms"):
         args += ["--platforms", o["platforms"]]
-    if o.get("launcher"):
-        args += ["--launcher"]
+    if o.get("launcher") is False:
+        args += ["--no-launcher"]
     if o.get("no_lockdown"):
         args += ["--no-lockdown"]
     if o.get("keep_plaintext"):
@@ -138,8 +138,8 @@ def build_toml(cfg):
     plats = [p for p in (cfg.get("platforms") or []) if p]
     if plats:
         out.append("platforms = %s" % _toml_list(plats))
-    if cfg.get("launcher"):
-        out.append("launcher = true")
+    if cfg.get("launcher", True) is False:
+        out.append("launcher = false")
     keys = []
     if cfg.get("master_env"):
         keys.append('master_env = "%s"' % cfg["master_env"])
@@ -325,7 +325,7 @@ class _App:
             self._plat_cbs.append(cb)
 
         self.p_lockdown = tk.BooleanVar(value=True)
-        self.p_launcher = tk.BooleanVar(value=False)
+        self.p_launcher = tk.BooleanVar(value=True)
         self.p_no_backup = tk.BooleanVar(value=False)
         self.p_keep = tk.BooleanVar(value=False)
         for text, var in ((self.t["lockdown"], self.p_lockdown),
@@ -423,7 +423,7 @@ class _App:
             ttk.Checkbutton(r2, text=p, variable=self.c_plats[p]).pack(side="left", padx=4)
 
         self.c_lockdown = tk.BooleanVar(value=True)
-        self.c_launcher = tk.BooleanVar(value=False)
+        self.c_launcher = tk.BooleanVar(value=True)
         self.c_keep = tk.BooleanVar(value=False)
         for text, var in ((self.t["lockdown"], self.c_lockdown),
                           (self.t["launcher"], self.c_launcher),
@@ -510,7 +510,7 @@ class _App:
         self.c_strength.set(p.get("strength", "") or "")
         self.c_chunk.set(str(p.get("chunk_size", "")) if p.get("chunk_size") else "")
         self.c_lockdown.set(bool(p.get("lockdown", True)))
-        self.c_launcher.set(bool(p.get("launcher", False)))
+        self.c_launcher.set(bool(p.get("launcher", True)))
         self.c_keep.set(bool(p.get("keep_plaintext", False)))
         self.c_exclude.delete("1.0", "end")
         self.c_exclude.insert("1.0", "\n".join(p.get("exclude", []) or []))

@@ -92,7 +92,7 @@ edits `renmori.toml`; it needs Tkinter and a display, see [gui.md](gui.md).
 | `--strength S` | `strength` | full | the default is full protection (the plugin is auto-downloaded if absent); `baseline` forces the open format; `auto` is full-when-available, else baseline (see below) |
 | `--plugin PATH` | — | `$RENMORI_PLUGIN` | use this plugin binary instead of the auto-downloaded one |
 | `--platforms LIST` | `platforms` | auto-detect | plugin only: comma list of target platforms, else detected from the build's `lib/py3-*` |
-| `--launcher` | `launcher` | off | plugin only: bind the keys to a native launcher and ship it |
+| `--launcher` / `--no-launcher` | `launcher` | on | plugin only: bind the keys to the native launcher and install it as each platform's entry point; `--no-launcher` ships without it |
 | `--no-lockdown` | `lockdown` | on | keep console/developer/export enabled |
 | `--no-backup` | — | off | protect in place without the `<dir>_bak` copy (no effect with `-o`) |
 | `--keep-plaintext` | `keep_plaintext` | off | don't delete packed originals (debug) |
@@ -204,7 +204,7 @@ python tools/verify_in_renpy.py --sdk /path/to/renpy-8.5.2-sdk --game /path/to/y
 ## Baseline and full protection
 
 **Full protection** — per-build structural polymorphism, runtime key derivation,
-a native core, and an optional native launcher — is the **closed** component:
+a native core, and the native launcher (on by default) — is the **closed** component:
 only the source is closed; the plugin itself is a free prebuilt binary. It is the
 **default**, and you do not install it by hand. The first time you run a full
 protect, `renmori` downloads the plugin for your platform from the public release,
@@ -235,7 +235,7 @@ the loader extension — is a deliberate opt-in via `--strength baseline`. It
 defeats off-the-shelf tools such as `unrpa` and `unrpyc`, but the key and the
 reader ship in the clear, so it is not real protection against a determined
 attacker. Pass `--strength auto` for the graceful behavior of full when a plugin
-is present and baseline otherwise. `--platforms` and `--launcher` apply only to
+is present and baseline otherwise. `--platforms` and `--launcher`/`--no-launcher` apply only to
 the plugin, and the process contract is specified in
 [interface.md](interface.md).
 

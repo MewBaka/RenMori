@@ -51,20 +51,27 @@ renmori protect ./the_question-7.0-market -o ./the_question-7.0-market-protected
 renmori verify  ./the_question-7.0-market-protected
 ```
 
-Only `game/` changes; the per-platform launchers are untouched:
+`game/` changes and, with the native launcher (the default), each platform's
+entry point is replaced by the launcher while the original engine is kept beside
+it under a `.renmori_real` name; with `--no-launcher` only `game/` changes:
 
 ```
 the_question-7.0-market-protected/
 ├─ game/
 │   ├─ renmori.rmc        # all assets, encrypted
 │   ├─ renmori.rpe        # runtime loader (Ren'Py loads it automatically)
+│   ├─ renmori_core-*     # native runtime, one per platform
 │   └─ steam_appid.txt    # kept as plaintext (the Steam SDK reads it directly)
-├─ lib/                   # untouched — per-platform Python runtimes
+├─ lib/
+│   └─ py3-linux-x86_64/
+│       ├─ the_question               # native launcher (Linux entry point)
+│       └─ the_question.renmori_real  # original engine
 ├─ renpy/                 # untouched
-├─ the_question.app/      # untouched — macOS launcher
-├─ the_question.exe       # untouched — Windows launcher
+├─ the_question.app/      # Contents/MacOS/the_question is the native launcher
+├─ the_question.exe       # native launcher (Windows entry point)
+├─ the_question.renmori_real.exe  # original engine
 ├─ the_question.py
-├─ the_question.sh        # untouched — Linux launcher
+├─ the_question.sh        # untouched — Linux entry script
 └─ renmori-manifest.json
 ```
 
@@ -126,8 +133,9 @@ Launch Options*), one per OS, pointing at the launcher inside the build:
 | Linux | `the_question.sh` |
 | macOS | `the_question.app` |
 
-The launcher boots Ren'Py; `renmori.rpe` takes over loading and decrypts assets
-in memory. Players notice nothing.
+The entry point (the native launcher, unless built with `--no-launcher`) starts
+Ren'Py; `renmori.rpe` takes over loading and decrypts assets in memory. Launch
+options are the same either way, and players notice nothing.
 
 ---
 
@@ -136,10 +144,10 @@ in memory. Players notice nothing.
 - **Don't double-wrap with Steam DRM** (the DRMToolkit executable wrapper) — it
   rewrites the launcher binary, can conflict with runtime self-checks, and is
   weak on its own, whereas RenMori already protects the data layer
-- **The overlay is safe (default build, without `--launcher`)** — RenMori only
+- **The overlay is safe without the launcher (`--no-launcher`)** — RenMori only
   hooks Ren'Py's file loading, never process/DLL injection, so the Steam overlay
-  works normally. If you build with `--launcher`, see "Native launcher and Steam"
-  below
+  works normally; with the native launcher (the default), see "Native launcher and
+  Steam" below
 - **Achievements and Cloud saves** go through Ren'Py's Python API and are
   unaffected; `renmori.rmc` is a static file, so Steam's file verification and
   delta updates work normally
@@ -150,12 +158,16 @@ in memory. Players notice nothing.
 
 ---
 
-## Native launcher (`--launcher`) and Steam
+## Native launcher and Steam
 
-`--launcher` is **opt-in**. It replaces the game's entry point with the
-RenMori native launcher, which performs boot attestation and then re-launches the
-real engine. That re-launch changes the process model the Steam overlay and the
-Steamworks SDK rely on, so its Steam compatibility is tracked per OS:
+From 1.2.6 the native launcher is **on by default** with the plugin, and
+`--no-launcher` builds without it. It is installed as each platform's entry
+point (`the_question.exe` on Windows, the engine stub
+`lib/py3-linux-x86_64/the_question` that `the_question.sh` starts on Linux, and
+the executable inside `the_question.app` on macOS), so launch options stay the
+same; it performs boot attestation and then starts the real engine. Starting the
+engine this way changes the process model the Steam overlay and the Steamworks
+SDK rely on, so its Steam compatibility is tracked per OS:
 
 | OS | Re-launch | Status |
 |----|-----------|--------|
@@ -166,21 +178,15 @@ Steamworks SDK rely on, so its Steam compatibility is tracked per OS:
 > **Help wanted — Windows.** The native-launcher + Steam combination has **not been
 > confirmed on Windows**: whether the Steam overlay (Shift+Tab) attaches to the
 > re-launched engine, and whether achievements / Cloud saves via the Steamworks SDK
-> work, are **untested**. If you ship a `--launcher` build to Steam on Windows,
-> please report back whether the overlay and achievements work. Until then, prefer
-> the **default (no-`--launcher`) build** for Steam on Windows, or keep `--launcher`
-> to macOS.
+> work, are **untested**. Check the overlay and achievements on Windows before
+> release and please report back; if they fail, build the Windows depot with
+> `--no-launcher`.
 
-As of 1.2.5 the launcher is **auto-installed only into the macOS `.app`**. For
-Windows/Linux the launcher ships as a separate file and must be wired in by hand
-(rename the real engine to `<name>.renmori_real` and put the launcher at the entry
-point), so a `--launcher` build is turn-key on macOS only for now.
-
-From 1.2.5 the launcher refuses to start when it finds loose Ren'Py scripts or
-extensions under `game/`, so mods or patches that players drop into `game/` as
-`.rpy` files stop a `--launcher` build from starting, so ship such content inside
-the build instead; builds protected with `--launcher` on 1.2.0 or earlier miss
-this check and should be protected again with 1.2.5 or later.
+The launcher refuses to start when it finds loose Ren'Py scripts or extensions
+under `game/`, so mods or patches that players drop into `game/` as `.rpy` files
+stop a launcher build from starting; ship such content inside the build instead.
+Builds protected with the launcher on 1.2.0 or earlier miss this check and should
+be protected again with 1.2.5 or later.
 
 The overlay rendering itself can feel heavy — that is Steam's own CEF layer (more
 so when testing through *Add a Non-Steam Game* rather than a real store app), not
@@ -197,6 +203,7 @@ RenMori.
 - [ ] Per-OS launch options set (`the_question.exe` / `.sh` / `.app`)
 - [ ] No Steam DRM wrapper applied
 - [ ] Did **not** re-run the launcher on the protected folder
-- [ ] If using `--launcher`: verified on macOS only — Steam overlay/SDK on Windows
-      is **untested** (see "Native launcher and Steam")
-- [ ] If using `--launcher`: protected with 1.2.5 or later
+- [ ] With the native launcher (the default): Steam overlay and achievements
+      checked on Windows, where they are **untested** (see "Native launcher and
+      Steam")
+- [ ] Protected with 1.2.6 or later

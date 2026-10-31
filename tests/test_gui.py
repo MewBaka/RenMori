@@ -22,12 +22,12 @@ def test_build_protect_args_empty():
 
 def test_build_protect_args_flags_and_lists():
     a = gui.build_protect_args({
-        "platforms": "mac-universal,linux-x64", "launcher": True,
+        "platforms": "mac-universal,linux-x64", "launcher": False,
         "no_lockdown": True, "keep_plaintext": True, "no_backup": True,
         "exclude": ["a/*", "   ", "b/*"], "chunk_size": "65536",
         "plugin": "/p", "config": "/c",
     })
-    assert "--launcher" in a and "--no-lockdown" in a
+    assert "--no-launcher" in a and "--no-lockdown" in a
     assert "--no-backup" in a and "--keep-plaintext" in a
     assert a.count("--exclude") == 2  # the blank glob is dropped
     i = a.index("--platforms")
@@ -45,7 +45,7 @@ def test_build_toml_roundtrips():
     text = gui.build_toml({
         "strength": "auto", "lockdown": False, "chunk_size": 65536,
         "exclude": ["thirdparty/*"], "keep_on_disk": ["steam_appid.txt"],
-        "platforms": ["mac-universal", "win-x64"], "launcher": True,
+        "platforms": ["mac-universal", "win-x64"], "launcher": False,
         "keep_plaintext": True,
         "master_env": "RENMORI_MASTER_KEY", "script_env": "RENMORI_SCRIPT_KEY",
     })
@@ -54,7 +54,7 @@ def test_build_toml_roundtrips():
     assert data["protect"]["lockdown"] is False
     assert data["protect"]["chunk_size"] == 65536
     assert data["protect"]["platforms"] == ["mac-universal", "win-x64"]
-    assert data["protect"]["launcher"] is True
+    assert data["protect"]["launcher"] is False
     assert data["keys"]["master_env"] == "RENMORI_MASTER_KEY"
 
 

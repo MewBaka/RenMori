@@ -61,7 +61,7 @@ State these plainly to customers:
   attacker's own code, such as a script or extension placed in the game folder or
   an edited engine file, can read every asset through Ren'Py's own loader, and
   such code is not tied to one game; builds made with the native launcher
-  (`--launcher`, 1.2.5 and later) refuse to start when loose scripts or
+  (the default with the plugin, 1.2.5 and later) refuse to start when loose scripts or
   extensions are present and bind the runtime's own files into the key, but they
   do not detect edits to the engine's own Python files, and a build without the
   launcher has no such check

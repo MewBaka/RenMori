@@ -38,9 +38,11 @@ keep_on_disk = ["steam_appid.txt"]
 # lib/py3-* directories.
 # platforms = ["win-x64", "linux-x64", "mac-universal"]
 
-# Plugin only: bind the keys to a native launcher and ship it, so the keys
-# reconstruct only when the game is started through it.
-launcher = false
+# Plugin only: the native launcher, on by default. It binds the keys to boot
+# attestation and is installed as the game's entry point on Windows, macOS and
+# Linux, so the keys reconstruct only when the game is started through it. Set
+# to false (or pass --no-launcher) to ship without it.
+# launcher = true
 
 [keys]
 

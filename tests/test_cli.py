@@ -406,6 +406,25 @@ def test_default_strength_requires_plugin(tmp_path, monkeypatch):
     assert rc == 2
 
 
+def _cfg_args(**kw):
+    base = dict(config=None, exclude=[], chunk_size=None, strength=None, lockdown=None,
+                keep_plaintext=False, platforms=None, launcher=None)
+    base.update(kw)
+    return argparse.Namespace(**base)
+
+
+def test_launcher_is_on_by_default(tmp_path):
+    assert cli._resolve_config(_cfg_args(), tmp_path)["launcher"] is True
+    assert cli._resolve_config(_cfg_args(launcher=False), tmp_path)["launcher"] is False
+
+
+def test_launcher_can_be_turned_off_in_config(tmp_path):
+    (tmp_path / "renmori.toml").write_text("[protect]\nlauncher = false\n")
+    assert cli._resolve_config(_cfg_args(), tmp_path)["launcher"] is False
+    # the command line still wins
+    assert cli._resolve_config(_cfg_args(launcher=True), tmp_path)["launcher"] is True
+
+
 # --- plugin auto-download (against a local file:// stand-in release) ----------
 
 def _pargs(**kw):

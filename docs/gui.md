@@ -69,7 +69,7 @@ The Protect tab corresponds to `renmori protect`.
 | Chunk size | `--chunk-size` | empty | In bytes, baseline only; when empty, the configuration file's value or the default 65536 applies |
 | Platforms | `--platforms` | auto-detect | Clear auto-detect to choose from `mac-universal`, `linux-x64` and `win-x64`; clearing it without choosing a platform still auto-detects; plugin only |
 | Lockdown (disable console/developer/export) | `--no-lockdown` | checked | Clearing it is equivalent to `--no-lockdown`; while checked, no option is passed and the configuration file's `lockdown` applies, otherwise on |
-| Bind a native launcher (--launcher) | `--launcher` | unchecked | Plugin only |
+| Native launcher (on by default; uncheck for --no-launcher) | `--no-launcher` when unchecked | checked | Plugin only |
 | No backup (in-place) | `--no-backup` | unchecked | Does not create `<dir>_bak` when protecting in place; no effect when an output directory is set |
 | Keep plaintext (debug) | `--keep-plaintext` | unchecked | Keeps the packed originals; for debugging only, never for a distribution build |
 | Plugin path | `--plugin` | empty | Uses the given plugin binary instead of the auto-downloaded one |
@@ -106,7 +106,7 @@ The Config tab is a form editor for `renmori.toml` that generates, opens and sav
 | Chunk size | `[protect] chunk_size` | Not written when empty |
 | Platforms | `[protect] platforms` | Not written when none is checked, in which case protection auto-detects |
 | Lockdown | `[protect] lockdown` | Always written, as `true` or `false` |
-| Bind a native launcher | `[protect] launcher` | Written only when checked |
+| Native launcher | `[protect] launcher` | Written as `false` only when unchecked |
 | Keep plaintext (debug) | `[protect] keep_plaintext` | Written only when checked |
 | Exclude globs (one per line) | `[protect] exclude` | Matching files stay unencrypted |
 | Keep on disk (one per line) | `[protect] keep_on_disk` | Files left on disk for programs other than the engine to read; `steam_appid.txt` is included by default |

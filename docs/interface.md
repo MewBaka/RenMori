@@ -71,7 +71,7 @@ The plugin copies `source_dir` to `output_dir`, packs every asset and script int
 | `files` | number of entries packed |
 | `scripts` | number of scripts transformed |
 | `cores` | one `{platform, filename}` per shipped native core |
-| `launcher` | per-platform launcher file names, or `null` |
+| `launcher` | per-platform launcher paths relative to `output_dir` (the installed entry point, or a standalone file), or `null` |
 
 On failure the plugin prints `{"interface": N, "status": "error", "message": "<reason>"}` and exits non-zero. The open tool reports the message and exits with its runtime-failure code without leaving a partial `output_dir` it can avoid.
 

@@ -342,8 +342,11 @@ def main(argv=None):
                    help="path to the closed protection plugin (else $RENMORI_PLUGIN)")
     p.add_argument("--platforms", default=None,
                    help="plugin only: comma list of target platforms (default: auto-detect)")
-    p.add_argument("--launcher", action="store_true",
-                   help="plugin only: bind keys to a native launcher and ship it")
+    p.add_argument("--launcher", dest="launcher", action="store_true", default=None,
+                   help="plugin only: bind the keys to the native launcher and install it as "
+                        "the game's entry point (the default)")
+    p.add_argument("--no-launcher", dest="launcher", action="store_false",
+                   help="plugin only: ship without the native launcher")
     p.add_argument("--no-lockdown", dest="lockdown", action="store_false", default=None,
                    help="do not disable console/developer/export in the build")
     p.add_argument("--keep-plaintext", action="store_true", help="don't delete packed originals (debug)")
@@ -429,7 +432,9 @@ def _resolve_config(args, src_root):
         "platforms": (
             [p.strip() for p in args.platforms.split(",") if p.strip()] if args.platforms
             else file_cfg.get("platforms") or None),
-        "launcher": bool(getattr(args, "launcher", False)) or bool(file_cfg.get("launcher", False)),
+        # The native launcher is on by default; --no-launcher or launcher = false opts out.
+        "launcher": (args.launcher if getattr(args, "launcher", None) is not None
+                     else bool(file_cfg.get("launcher", True))),
     }
     return settings
 

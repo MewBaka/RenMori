@@ -77,7 +77,7 @@ renmori verify ./dist/MyGame-1.0-pc-protected
 | `--strength S` | `strength` | full | 默认为完整保护（插件缺失时自动下载）；`baseline` 强制使用开源格式；`auto` 为可用时用完整、否则用基线（见下文） |
 | `--plugin PATH` | — | `$RENMORI_PLUGIN` | 使用这个插件二进制,而非自动下载的那个 |
 | `--platforms LIST` | `platforms` | 自动检测 | 仅插件：目标平台的逗号分隔列表，否则从构建的 `lib/py3-*` 检测 |
-| `--launcher` | `launcher` | 关 | 仅插件：将密钥绑定到原生启动器并随之分发 |
+| `--launcher` / `--no-launcher` | `launcher` | 开 | 仅插件：将密钥绑定到原生启动器，并将其装配为各平台的入口点；`--no-launcher` 表示不使用启动器 |
 | `--no-lockdown` | `lockdown` | 开 | 保持 console/developer/export 处于启用状态 |
 | `--no-backup` | — | 关 | 原地保护时不创建 `<dir>_bak` 副本（对 `-o` 无效） |
 | `--keep-plaintext` | `keep_plaintext` | 关 | 不删除已打包的原始文件（调试用） |
@@ -181,7 +181,7 @@ python tools/verify_in_renpy.py --sdk /path/to/renpy-8.5.2-sdk --game /path/to/y
 
 ## 基线保护与完整保护
 
-**完整保护**——每次构建的结构多态、运行时密钥派生、原生核心，以及可选的原生启动器——是**闭源**组件：只有源码闭源,插件本身是免费的预编译二进制。它是**默认**,且无需手动安装:第一次做完整保护时,`renmori` 会从公开 Release 下载对应平台的插件,按 Release 的 `SHA256SUMS` 校验后缓存起来。
+**完整保护**——每次构建的结构多态、运行时密钥派生、原生核心，以及原生启动器（默认开启）——是**闭源**组件：只有源码闭源,插件本身是免费的预编译二进制。它是**默认**,且无需手动安装:第一次做完整保护时,`renmori` 会从公开 Release 下载对应平台的插件,按 Release 的 `SHA256SUMS` 校验后缓存起来。
 
 ```bash
 renmori protect ./dist/MyGame-1.0-pc -o ./dist/MyGame-1.0-pc-protected
@@ -200,7 +200,7 @@ renmori protect ./dist/MyGame-1.0-pc -o ./dist/MyGame-1.0-pc-protected
 
 无插件且禁用下载时,完整保护会**直接失败**,而不会悄悄退化为较弱的基线。
 
-**基线**流水线——固定的容器格式,加载器扩展中内嵌一个占位密钥——需经 `--strength baseline` 显式启用。它能挫败 `unrpa`、`unrpyc` 等现成工具,但密钥与读取器以明文随附,因此面对有决心的攻击者并非真正的保护。传入 `--strength auto` 可获得"有插件时用完整、否则用基线"的平滑行为。`--platforms` 与 `--launcher` 仅对插件生效,工具与插件之间的进程契约在 [interface.md](interface.md) 中规定。
+**基线**流水线——固定的容器格式,加载器扩展中内嵌一个占位密钥——需经 `--strength baseline` 显式启用。它能挫败 `unrpa`、`unrpyc` 等现成工具,但密钥与读取器以明文随附,因此面对有决心的攻击者并非真正的保护。传入 `--strength auto` 可获得"有插件时用完整、否则用基线"的平滑行为。`--platforms` 与 `--launcher`/`--no-launcher` 仅对插件生效,工具与插件之间的进程契约在 [interface.md](interface.md) 中规定。
 
 无论哪条流水线,都能处理用启动器归档构建的游戏:`.rpa` 封包会在保护时被解开,其中的条目作为独立文件打进容器,这样封包消失后引擎仍能找到脚本与素材。
 

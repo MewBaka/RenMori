@@ -69,7 +69,7 @@ Tkinter 随 CPython 一同发行，图形界面不引入任何额外依赖；未
 | 分块大小 | `--chunk-size` | 空 | 单位为字节，仅对基线生效；为空时沿用配置文件或默认值 65536 |
 | 目标平台 | `--platforms` | 自动检测 | 取消勾选「自动检测」后可选择 `mac-universal`、`linux-x64`、`win-x64`；取消勾选但未选择任何平台时仍按自动检测处理；仅对插件生效 |
 | 锁定（关闭 console/developer/导出） | `--no-lockdown` | 勾选 | 取消勾选等同于 `--no-lockdown`；保持勾选时不传参，沿用配置文件中的 `lockdown`，未配置时为开启 |
-| 绑定原生启动器（--launcher） | `--launcher` | 不勾选 | 仅对插件生效 |
+| 原生启动器（默认开启；取消勾选即 --no-launcher） | 取消勾选时为 `--no-launcher` | 勾选 | 仅对插件生效 |
 | 不备份（原地） | `--no-backup` | 不勾选 | 原地保护时不创建 `<dir>_bak`；指定输出目录时无效 |
 | 保留明文（调试） | `--keep-plaintext` | 不勾选 | 不删除已打包的原始文件，仅用于调试，切勿用于发行版构建 |
 | 插件路径 | `--plugin` | 空 | 使用指定的插件二进制，而非自动下载的插件 |
@@ -106,7 +106,7 @@ Tkinter 随 CPython 一同发行，图形界面不引入任何额外依赖；未
 | 分块大小 | `[protect] chunk_size` | 为空时不写入该键 |
 | 目标平台 | `[protect] platforms` | 均不勾选时不写入该键，保护时按自动检测处理 |
 | 锁定 | `[protect] lockdown` | 始终写入，取值为 `true` 或 `false` |
-| 绑定原生启动器 | `[protect] launcher` | 仅在勾选时写入 |
+| 原生启动器 | `[protect] launcher` | 仅在取消勾选时写入 `false` |
 | 保留明文（调试） | `[protect] keep_plaintext` | 仅在勾选时写入 |
 | 排除 glob（每行一个） | `[protect] exclude` | 匹配到的文件保持不加密 |
 | 保留在磁盘（每行一个） | `[protect] keep_on_disk` | 保留在磁盘上供引擎以外的程序读取的文件，`steam_appid.txt` 已默认包含 |

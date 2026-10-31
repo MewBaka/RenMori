@@ -46,11 +46,12 @@ Ren'Py base dir, `game/`, and `game/libs`, **before** `renpy.loader.index_files(
 and before the script is loaded.
 
 RenMori ships its runtime as `game/renmori.rpe`. (`.rpe` is also an attacker
-injection point: with the optional native launcher (`--launcher`), 1.2.5 and
-later refuse to start when any `.rpe` other than `game/renmori.rpe` is present in
+injection point: with the native launcher (on by default with the plugin), 1.2.5
+and later refuse to start when any `.rpe` other than `game/renmori.rpe` is present in
 the distribution root, `game/`, `game/libs`, or `renpy/common`, and bind
 `game/renmori.rpe` itself into key derivation, so a rewritten copy derives the
-wrong keys; a build without `--launcher` has no such gate.)
+wrong keys; a build made with `--no-launcher` or with the baseline has no such
+gate.)
 
 ## 4. The return type matters: `RWopsIO` and the reopen trap
 

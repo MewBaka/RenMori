@@ -57,7 +57,7 @@ follows the system locale; pin it with `--lang en|zh` or `RENMORI_LANG`.
 | `--strength S` | `strength` | full | unset = the plugin's strongest (fails without a plugin); `auto` = full, else baseline; `baseline` = open format, never downloads |
 | `--plugin PATH` | — | autodetect | closed plugin path (else `RENMORI_PLUGIN`, the cache, then a download) |
 | `--platforms LIST` | `platforms` | auto-detect | plugin only: comma list of target platforms |
-| `--launcher` | `launcher` | off | plugin only: bind keys to a native launcher and ship it |
+| `--launcher` / `--no-launcher` | `launcher` | on | plugin only: bind keys to the native launcher and install it as each platform's entry point; `--no-launcher` ships without it |
 | `--no-lockdown` | `lockdown` | on | keep console/developer/export enabled |
 | `--no-backup` | — | off | skip the default `<dir>_bak` copy when protecting in place (no effect with `-o`) |
 | `--keep-plaintext` | `keep_plaintext` | off | debugging (baseline only) |

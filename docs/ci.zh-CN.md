@@ -40,7 +40,7 @@ stdout 的最后一行始终是一个 JSON 对象（`{"status": "ok", …}` 或 
 | `--strength S` | `strength` | 完整保护 | 未设置时使用插件声明的最强强度（无插件时失败）；`auto` 有插件时完整保护、否则基线；`baseline` 为开源格式，从不下载插件 |
 | `--plugin PATH` | — | 自动查找 | 闭源插件路径（否则依次取 `RENMORI_PLUGIN`、缓存、下载） |
 | `--platforms LIST` | `platforms` | 自动探测 | 仅插件：以逗号分隔的目标平台列表 |
-| `--launcher` | `launcher` | 关 | 仅插件：将密钥绑定到原生启动器并随附 |
+| `--launcher` / `--no-launcher` | `launcher` | 开 | 仅插件：将密钥绑定到原生启动器，并将其装配为各平台的入口点；`--no-launcher` 表示不使用启动器 |
 | `--no-lockdown` | `lockdown` | 开 | 保持 console/developer/export 处于启用状态 |
 | `--no-backup` | — | 关 | 原地保护时跳过默认的 `<dir>_bak` 复制（对 `-o` 无效） |
 | `--keep-plaintext` | `keep_plaintext` | 关 | 调试用（仅基线） |
