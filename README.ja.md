@@ -6,7 +6,7 @@
 
 **商用 Ren'Py ビジュアルノベル向けの全データ保護ツール、100% 無料**
 
-RenMori は Ren'Py 8.x でビルド済みのゲームを受け取り、保護された配布物を出力します。スクリプト・立ち絵・CG・音声・動画・フォント・翻訳・設定といったすべてのデータは暗号化コンテナに封入され、実行中のエンジン内部でのみ復号されます。プレイヤーの端末で動くゲームを完全に解析不能にすることは原理的にできません。RenMori は抽出のコストを最大限に引き上げ、既存の解凍スクリプトや大半の手抜き Agent では歯が立たないようにしますが、専門家によるリバースエンジニアリングまでは防げません。正直な脅威モデルは [こちら](docs/threat-model.md)
+RenMori は Ren'Py 8.x でビルド済みのゲームを受け取り、保護された配布物を出力します。スクリプト・立ち絵・CG・音声・動画・フォント・翻訳・設定といったすべてのデータは暗号化コンテナに封入され、実行中のエンジン内部でのみ復号されます。プレイヤーの端末で動くゲームを完全に解析不能にすることは原理的にできません。RenMori は抽出のコストを最大限に引き上げ、既存の解凍スクリプトや大半の手抜き Agent では歯が立たないようにしますが、専門家によるリバースエンジニアリングまでは防げません。正直な脅威モデルは [こちら](https://renmori.mewbaka.cn/ja/technical/threat-model)
 
 </div>
 
@@ -49,34 +49,39 @@ cd RenMori && pip install -e .
 
 4. **配布**する — 保護済みフォルダをそのままリリースとして配布します（`renmori.rmc` と `renmori.rpe` を一緒に）。それに対して Ren'Py ランチャーのビルドを再実行しないでください。ソースから作り直されて保護が失われます
 
-既定ではゼロ設定で動作し、CI 向けに機械可読な JSON 結果を 1 行出力し、終了コードも明確です。任意の `renmori.toml` でチャンクサイズ・除外リスト・ロックダウン・強度・鍵ソースを制御できます。オープンソースの**ベースライン**形式（プラグインなし・完全オフライン）を使うには `--strength baseline` を指定します。詳細は [docs/usage.md](docs/usage.md) と [examples/renmori.toml](examples/renmori.toml) を参照してください。
+既定ではゼロ設定で動作し、CI 向けに機械可読な JSON 結果を 1 行出力し、終了コードも明確です。任意の `renmori.toml` でチャンクサイズ・除外リスト・ロックダウン・強度・鍵ソースを制御できます。オープンソースの**ベースライン**形式（プラグインなし・完全オフライン）を使うには `--strength baseline` を指定します。詳細は [CLI ドキュメント](https://renmori.mewbaka.cn/ja/cli/overview) と [renmori.toml の例](https://renmori.mewbaka.cn/ja/cli/configuration) を参照してください。
 
 ---
 
 ## 2. ドキュメント
 
-> ドキュメントサイトは近日公開予定です。それまでは下記リンクが本リポジトリ内のソースを指します。日本語訳は未整備のため、リンク先は英語版です（中国語版は各ファイルの `.zh-CN.md`）。
+完全なドキュメントは **[renmori.mewbaka.cn](https://renmori.mewbaka.cn/ja/)** にあります。利用の流れに沿った主要ページ:
 
 **理解する**
 
-- [research.md](docs/research.md) — 既存のツールと、新しいツールが必要な理由
-- [architecture.md](docs/architecture.md) — レイヤーごとの完全な設計
-- [threat-model.md](docs/threat-model.md) — 何を防げて、何を防げないか
+- [はじめに](https://renmori.mewbaka.cn/ja/guide/introduction) — RenMori とは何か、何を保護するのか
+- [既存手法の調査](https://renmori.mewbaka.cn/ja/technical/research) — 既存のツールと、新しいツールが必要な理由
+- [アーキテクチャ](https://renmori.mewbaka.cn/ja/technical/architecture) — レイヤーごとの完全な設計
+- [脅威モデル](https://renmori.mewbaka.cn/ja/technical/threat-model) — 何を防げて、何を防げないか
 
 **ゲームを保護する**
 
-- [usage.md](docs/usage.md) — `renmori` CLI の全リファレンス（`protect` / `verify`、引数、出力）
-- [examples/renmori.toml](examples/renmori.toml) — 設定ファイル
+- [クイックスタート](https://renmori.mewbaka.cn/ja/guide/quick-start) — ビルドから保護済みリリースまで
+- [CLI リファレンス](https://renmori.mewbaka.cn/ja/cli/overview) — `protect` / `verify`、引数、出力
+- [設定](https://renmori.mewbaka.cn/ja/cli/configuration) — `renmori.toml` 設定ファイル
+- [プラグイン](https://renmori.mewbaka.cn/ja/cli/plugin) — ベースラインと完全保護、閉源バイナリ
 
 **CI で自動化する**
 
-- [ci.md](docs/ci.md) — CI パイプラインと鍵管理
-- [examples/github-actions-protect.yml](examples/github-actions-protect.yml) — GitHub Actions のサンプル
-- [interface.md](docs/interface.md) — オープンなツールと閉源プラグインの間の契約
+- [CI と鍵管理](https://renmori.mewbaka.cn/ja/integration/ci) — パイプライン、シークレット、GitHub Actions のサンプル
 
 **リリースする**
 
-- [steam-release.md](docs/steam-release.md) — Steam への公開（オーバーレイ・DRM・Steamworks）
+- [Steam 配信](https://renmori.mewbaka.cn/ja/integration/steam-release) — オーバーレイ・DRM・Steamworks
+
+**内部構造とリファレンス**
+
+- [コンテナ形式](https://renmori.mewbaka.cn/ja/technical/container-format) · [ローダーフック](https://renmori.mewbaka.cn/ja/technical/loader-hook) · [スクリプト層](https://renmori.mewbaka.cn/ja/technical/script-layer) · [プラグインインターフェース](https://renmori.mewbaka.cn/ja/technical/plugin-interface)
 
 ---
 
@@ -88,8 +93,8 @@ RenMori ——フレームワークとツール、閉源プラグイン、そし
 - **再販は禁止** — RenMori 本体やその改変版を販売すること、またそれを使った有料の「代行暗号化」サービスを運営することはできません
 - これは **source-available（ソース公開）** ライセンスであり、OSI のオープンソースライセンスではありません。「再販禁止」という条項は寛容型ライセンスでは表現できないためです
 
-サードパーティの告知は [`NOTICE`](NOTICE) を参照してください（FFmpeg の LGPL/GPL 条項に注意）。解析不能性は一切保証しません。ライセンスと [docs/threat-model.md](docs/threat-model.md) を参照してください。
+サードパーティの告知は [`NOTICE`](NOTICE) を参照してください（FFmpeg の LGPL/GPL 条項に注意）。解析不能性は一切保証しません。ライセンスと [脅威モデル](https://renmori.mewbaka.cn/ja/technical/threat-model) を参照してください。
 
-完全な条項と FAQ: *（ウェブサイト近日公開）*。
+完全な条項・提出要件・開発者向けの説明はドキュメントサイトにあります: [免責事項](https://renmori.mewbaka.cn/ja/license/disclaimer)、[提出要件](https://renmori.mewbaka.cn/ja/license/contributing)、[開発者向けのヒント](https://renmori.mewbaka.cn/ja/license/developer-notes)。
 
 本プロジェクトのライセンスに関するお問い合わせ／技術サポートは、メール: *team@mewbaka.cn* までご連絡ください。

@@ -6,7 +6,7 @@
 
 **Full-data protection for commercial Ren'Py visual novels — 100% free**
 
-RenMori takes a Ren'Py 8.x build and produces a protected distribution: every asset — scripts, sprites, CGs, audio, video, fonts, translations, and configuration — is packed into an encrypted container and decrypted only inside the running engine. A game that runs on the player's machine can never be made uncrackable, so RenMori maximizes the cost of extraction — off-the-shelf unpackers and most lazy agents fail outright — but it cannot stop an expert-level reverse. The honest threat model is [here](docs/threat-model.md).
+RenMori takes a Ren'Py 8.x build and produces a protected distribution: every asset — scripts, sprites, CGs, audio, video, fonts, translations, and configuration — is packed into an encrypted container and decrypted only inside the running engine. A game that runs on the player's machine can never be made uncrackable, so RenMori maximizes the cost of extraction — off-the-shelf unpackers and most lazy agents fail outright — but it cannot stop an expert-level reverse. The honest threat model is [here](https://renmori.mewbaka.cn/en/technical/threat-model).
 
 </div>
 
@@ -61,36 +61,40 @@ The command is zero-config by default, prints a machine-readable JSON result lin
 for CI, and has clear exit codes. An optional `renmori.toml` controls chunk size,
 an exclude list, lockdown, strength, and key sources. For the open-source
 **baseline** format (no plugin, fully offline), pass `--strength baseline`. Full
-reference: [docs/usage.md](docs/usage.md) and
-[examples/renmori.toml](examples/renmori.toml).
+reference: [the CLI docs](https://renmori.mewbaka.cn/en/cli/overview) and
+[the renmori.toml example](https://renmori.mewbaka.cn/en/cli/configuration).
 
 ---
 
 ## 2. Documentation
 
-> A hosted docs site is coming soon; until then the links below point at the
-> sources in this repository. (Each page also has a `*.zh-CN.md` Chinese version.)
+The full documentation lives at **[renmori.mewbaka.cn](https://renmori.mewbaka.cn/en/)** — the key pages, in the order you'll need them:
 
 **Understand it**
 
-- [research.md](docs/research.md) — what already exists and why a new tool is needed
-- [architecture.md](docs/architecture.md) — the full design, layer by layer
-- [threat-model.md](docs/threat-model.md) — what it stops, and what it cannot
+- [Introduction](https://renmori.mewbaka.cn/en/guide/introduction) — what RenMori is and what it protects
+- [Research](https://renmori.mewbaka.cn/en/technical/research) — what already exists and why a new tool is needed
+- [Architecture](https://renmori.mewbaka.cn/en/technical/architecture) — the full design, layer by layer
+- [Threat model](https://renmori.mewbaka.cn/en/technical/threat-model) — what it stops, and what it cannot
 
 **Protect your game**
 
-- [usage.md](docs/usage.md) — the `renmori` CLI in full (`protect` / `verify`, flags, output)
-- [examples/renmori.toml](examples/renmori.toml) — the configuration file
+- [Quick start](https://renmori.mewbaka.cn/en/guide/quick-start) — from a build to a protected release
+- [CLI reference](https://renmori.mewbaka.cn/en/cli/overview) — `protect` / `verify`, flags, and output
+- [Configuration](https://renmori.mewbaka.cn/en/cli/configuration) — the `renmori.toml` file
+- [The plugin](https://renmori.mewbaka.cn/en/cli/plugin) — baseline vs. full protection and the closed binary
 
 **Automate in CI**
 
-- [ci.md](docs/ci.md) — CI pipelines and key management
-- [examples/github-actions-protect.yml](examples/github-actions-protect.yml) — a sample GitHub Actions workflow
-- [interface.md](docs/interface.md) — the contract between the open tool and the closed plugin
+- [CI & key management](https://renmori.mewbaka.cn/en/integration/ci) — pipelines, secrets, and a sample GitHub Actions workflow
 
 **Ship**
 
-- [steam-release.md](docs/steam-release.md) — publishing to Steam (overlay, DRM, Steamworks)
+- [Steam release](https://renmori.mewbaka.cn/en/integration/steam-release) — overlay, DRM, and Steamworks
+
+**Internals & reference**
+
+- [Container format](https://renmori.mewbaka.cn/en/technical/container-format) · [Loader hook](https://renmori.mewbaka.cn/en/technical/loader-hook) · [Script layer](https://renmori.mewbaka.cn/en/technical/script-layer) · [Plugin interface](https://renmori.mewbaka.cn/en/technical/plugin-interface)
 
 ---
 
@@ -108,9 +112,9 @@ inside a game — is under the **RenMori License 1.0**:
   no-resale term cannot be expressed under a permissive license.
 
 Third-party notices are in [`NOTICE`](NOTICE) (note the FFmpeg LGPL/GPL terms). No
-warranty of unbreakability is given — see the license and
-[docs/threat-model.md](docs/threat-model.md).
+warranty of unbreakability is given — see the license and the
+[threat model](https://renmori.mewbaka.cn/en/technical/threat-model).
 
-Full terms and FAQ: *(website coming soon)*.
+Full terms and developer guidance are on the docs site: [disclaimer](https://renmori.mewbaka.cn/en/license/disclaimer), [contribution terms](https://renmori.mewbaka.cn/en/license/contributing), and [notes for developers](https://renmori.mewbaka.cn/en/license/developer-notes).
 
 For licensing questions or technical help, contact: *team@mewbaka.cn*
