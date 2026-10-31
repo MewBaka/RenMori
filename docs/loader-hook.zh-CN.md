@@ -44,8 +44,11 @@ English version: [loader-hook.md](loader-hook.md)
 一个 `*.rpe`（包含 `autorun.py` 的 zip，会被置入 `sys.path`）与 `*.rpe.py`，**早
 于** `renpy.loader.index_files()` 且早于脚本被加载。
 
-RenMori 将其运行时作为 `game/renmori.rpe` 随附。（计划在后续版本中迁入原生启动器；
-`.rpe` 同时也是攻击者的注入点，必须被锁定为仅限我们签名的扩展。）
+RenMori 将其运行时作为 `game/renmori.rpe` 随附。（`.rpe` 同时也是攻击者的注入点；
+启用可选的原生启动器（`--launcher`）时，1.2.5 及以后的版本在发行版根目录、`game/`、
+`game/libs` 或 `renpy/common` 中出现 `game/renmori.rpe` 以外的任何 `.rpe` 时拒绝启动，
+并把 `game/renmori.rpe` 本身纳入密钥派生，被改写的副本只能派生出错误的密钥；未启用
+`--launcher` 的构建没有该门禁。）
 
 ## 4. 返回类型至关重要：`RWopsIO` 与重开陷阱
 

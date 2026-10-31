@@ -129,7 +129,7 @@ steamcmd +login YOUR_ACCOUNT +run_app_build "D:\steam\app_build_YOUR_APPID.vdf" 
 
 ## 原生 launcher（`--launcher`）与 Steam
 
-`--launcher` 在 1.2.0 中是**可选项（默认不开）**，它把游戏入口替换为 RenMori 原生 launcher——先做启动认证、再重启真正的引擎，这个重启改变了 Steam 覆盖层与 Steamworks SDK 所依赖的进程模型，因此其 Steam 兼容性分平台记录：
+`--launcher` 是**可选项（默认不开）**，它把游戏入口替换为 RenMori 原生 launcher——先做启动认证、再重启真正的引擎，这个重启改变了 Steam 覆盖层与 Steamworks SDK 所依赖的进程模型，因此其 Steam 兼容性分平台记录：
 
 | 平台 | 重启方式 | 状态 |
 |----|----------|--------|
@@ -139,7 +139,9 @@ steamcmd +login YOUR_ACCOUNT +run_app_build "D:\steam\app_build_YOUR_APPID.vdf" 
 
 > **求反馈——Windows。** 原生 launcher + Steam 的组合**尚未在 Windows 上确认**：Steam 覆盖层（Shift+Tab）能否附着到被重启的引擎、以及经 Steamworks SDK 的成就 / 云存档是否可用，**均未经测试**。若你把 `--launcher` 构建发布到 Windows 平台的 Steam，请反馈 overlay 与成就是否正常。在确认之前，Windows 上的 Steam 请优先使用**默认（不加 `--launcher`）构建**，或仅对 macOS 启用 `--launcher`。
 
-另外：1.2.0 中 launcher **仅自动装配进 macOS 的 `.app`**，Windows/Linux 下 launcher 以独立文件随包、需手动接入（把真引擎改名为 `<name>.renmori_real`、并把 launcher 放到入口位置），因此目前 `--launcher` 构建只有 macOS 开箱即用。
+另外：截至 1.2.5，launcher **仅自动装配进 macOS 的 `.app`**，Windows/Linux 下 launcher 以独立文件随包、需手动接入（把真引擎改名为 `<name>.renmori_real`、并把 launcher 放到入口位置），因此目前 `--launcher` 构建只有 macOS 开箱即用。
+
+自 1.2.5 起，launcher 在 `game/` 下发现散装的 Ren'Py 脚本或扩展时会拒绝启动，因此玩家以 `.rpy` 文件形式放进 `game/` 的模组或补丁会使 `--launcher` 构建无法启动，这类内容应随构建一并发布；以 1.2.0 或更早版本、带 `--launcher` 加密的构建缺少这项检查，应使用 1.2.5 或更高版本重新加密。
 
 覆盖层本身的渲染可能显得卡顿——那是 Steam 自带的 CEF 层（用"添加非 Steam 游戏"测试时尤甚，不同于正式商店 App），与 RenMori 无关。
 
@@ -155,3 +157,4 @@ steamcmd +login YOUR_ACCOUNT +run_app_build "D:\steam\app_build_YOUR_APPID.vdf" 
 - [ ] 未应用 Steam DRM 包装器
 - [ ] **未**对受保护的文件夹重新运行启动器
 - [ ] 若使用 `--launcher`：仅在 macOS 上验证过——Windows 的 Steam 覆盖层/SDK **尚未测试**（见"原生 launcher 与 Steam"）
+- [ ] 若使用 `--launcher`：已使用 1.2.5 或更高版本加密

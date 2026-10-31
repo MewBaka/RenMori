@@ -152,7 +152,7 @@ in memory. Players notice nothing.
 
 ## Native launcher (`--launcher`) and Steam
 
-`--launcher` is **opt-in** in 1.2.0. It replaces the game's entry point with the
+`--launcher` is **opt-in**. It replaces the game's entry point with the
 RenMori native launcher, which performs boot attestation and then re-launches the
 real engine. That re-launch changes the process model the Steam overlay and the
 Steamworks SDK rely on, so its Steam compatibility is tracked per OS:
@@ -171,10 +171,16 @@ Steamworks SDK rely on, so its Steam compatibility is tracked per OS:
 > the **default (no-`--launcher`) build** for Steam on Windows, or keep `--launcher`
 > to macOS.
 
-In 1.2.0 the launcher is **auto-installed only into the macOS `.app`**. For
+As of 1.2.5 the launcher is **auto-installed only into the macOS `.app`**. For
 Windows/Linux the launcher ships as a separate file and must be wired in by hand
 (rename the real engine to `<name>.renmori_real` and put the launcher at the entry
 point), so a `--launcher` build is turn-key on macOS only for now.
+
+From 1.2.5 the launcher refuses to start when it finds loose Ren'Py scripts or
+extensions under `game/`, so mods or patches that players drop into `game/` as
+`.rpy` files stop a `--launcher` build from starting, so ship such content inside
+the build instead; builds protected with `--launcher` on 1.2.0 or earlier miss
+this check and should be protected again with 1.2.5 or later.
 
 The overlay rendering itself can feel heavy — that is Steam's own CEF layer (more
 so when testing through *Add a Non-Steam Game* rather than a real store app), not
@@ -193,3 +199,4 @@ RenMori.
 - [ ] Did **not** re-run the launcher on the protected folder
 - [ ] If using `--launcher`: verified on macOS only — Steam overlay/SDK on Windows
       is **untested** (see "Native launcher and Steam")
+- [ ] If using `--launcher`: protected with 1.2.5 or later

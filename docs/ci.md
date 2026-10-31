@@ -52,7 +52,7 @@ follows the system locale; pin it with `--lang en|zh` or `RENMORI_LANG`.
 |------|-----------|---------|-------|
 | `-o, --output DIR` | — | in place | copy to DIR first (DIR must not exist) |
 | `-c, --config FILE` | — | autodetect | else `<game-dir>/renmori.toml` or `./renmori.toml` |
-| `--chunk-size N` | `chunk_size` | 65536 | container chunk size |
+| `--chunk-size N` | `chunk_size` | 65536 | container chunk size (baseline only) |
 | `--exclude GLOB` | `exclude` | none | leave matching files unencrypted (repeatable; CLI adds to config) |
 | `--strength S` | `strength` | full | unset = the plugin's strongest (fails without a plugin); `auto` = full, else baseline; `baseline` = open format, never downloads |
 | `--plugin PATH` | — | autodetect | closed plugin path (else `RENMORI_PLUGIN`, the cache, then a download) |

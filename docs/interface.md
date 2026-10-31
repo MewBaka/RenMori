@@ -54,7 +54,7 @@ The request object on stdin:
 | `platforms` | an explicit list of target platform keys, or `null` to auto-detect from `source_dir/lib/py3-*` |
 | `launcher` | whether to bind the keys to a native launcher and ship it |
 | `exclude` | game-relative globs to leave outside the container |
-| `chunk_size` | container chunk size in bytes, or `null` for the plugin's default |
+| `chunk_size` | container chunk size in bytes, or `null`; the current plugin picks a per-build chunk size and ignores it |
 | `lockdown` | whether to disable the developer console, developer mode, and data-export subcommands in the build |
 | `keys` | an object; reserved for key material or key-source directives, empty by default |
 

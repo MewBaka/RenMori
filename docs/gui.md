@@ -66,7 +66,7 @@ The Protect tab corresponds to `renmori protect`.
 | Control | Option | Default | Notes |
 |---------|--------|---------|-------|
 | Strength | `--strength` | empty | Empty, `full`, `auto` or `baseline`; when empty, no option is passed and the configuration file's value applies, otherwise `full` |
-| Chunk size | `--chunk-size` | empty | In bytes; when empty, the configuration file's value or the default 65536 applies |
+| Chunk size | `--chunk-size` | empty | In bytes, baseline only; when empty, the configuration file's value or the default 65536 applies |
 | Platforms | `--platforms` | auto-detect | Clear auto-detect to choose from `mac-universal`, `linux-x64` and `win-x64`; clearing it without choosing a platform still auto-detects; plugin only |
 | Lockdown (disable console/developer/export) | `--no-lockdown` | checked | Clearing it is equivalent to `--no-lockdown`; while checked, no option is passed and the configuration file's `lockdown` applies, otherwise on |
 | Bind a native launcher (--launcher) | `--launcher` | unchecked | Plugin only |

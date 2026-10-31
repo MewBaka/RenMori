@@ -72,7 +72,7 @@ renmori verify ./dist/MyGame-1.0-pc-protected
 |------|-----------|---------|-------|
 | `-o, --output DIR` | — | 原地 | 在 DIR 中保护一份副本（DIR 必须不存在）；原目录保持不变 |
 | `-c, --config FILE` | — | 自动探测 | 否则取 `<game-dir>/renmori.toml` 或 `./renmori.toml` |
-| `--chunk-size N` | `chunk_size` | 65536 | 容器分块大小（字节） |
+| `--chunk-size N` | `chunk_size` | 65536 | 仅基线：容器分块大小（字节）；插件逐构建选取分块大小 |
 | `--exclude GLOB` | `exclude` | 无 | 匹配到的文件保持不加密（可重复；在配置基础上追加） |
 | `--strength S` | `strength` | full | 默认为完整保护（插件缺失时自动下载）；`baseline` 强制使用开源格式；`auto` 为可用时用完整、否则用基线（见下文） |
 | `--plugin PATH` | — | `$RENMORI_PLUGIN` | 使用这个插件二进制,而非自动下载的那个 |

@@ -57,6 +57,14 @@ State these plainly to customers:
 - **A dedicated expert** targeting one specific game and willing to spend the
   time — they can win against that one game and version, but they cannot turn the
   win into a universal tool
+- **Code run inside the engine** — anything that makes the engine run the
+  attacker's own code, such as a script or extension placed in the game folder or
+  an edited engine file, can read every asset through Ren'Py's own loader, and
+  such code is not tied to one game; builds made with the native launcher
+  (`--launcher`, 1.2.5 and later) refuse to start when loose scripts or
+  extensions are present and bind the runtime's own files into the key, but they
+  do not detect edits to the engine's own Python files, and a build without the
+  launcher has no such check
 
 Truly stopping injected extractors would require kernel-level anti-cheat, which
 is out of scope, hostile to players, and incompatible with the performance-first

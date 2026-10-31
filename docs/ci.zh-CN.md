@@ -35,7 +35,7 @@ stdout 的最后一行始终是一个 JSON 对象（`{"status": "ok", …}` 或 
 |------|-----------|---------|-------|
 | `-o, --output DIR` | — | 原地 | 先复制到 DIR（DIR 必须不存在） |
 | `-c, --config FILE` | — | 自动探测 | 否则取 `<game-dir>/renmori.toml` 或 `./renmori.toml` |
-| `--chunk-size N` | `chunk_size` | 65536 | 容器分块大小 |
+| `--chunk-size N` | `chunk_size` | 65536 | 容器分块大小（仅基线） |
 | `--exclude GLOB` | `exclude` | 无 | 匹配到的文件保持不加密（可重复；CLI 在配置基础上追加） |
 | `--strength S` | `strength` | 完整保护 | 未设置时使用插件声明的最强强度（无插件时失败）；`auto` 有插件时完整保护、否则基线；`baseline` 为开源格式，从不下载插件 |
 | `--plugin PATH` | — | 自动查找 | 闭源插件路径（否则依次取 `RENMORI_PLUGIN`、缓存、下载） |

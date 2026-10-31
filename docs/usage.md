@@ -87,7 +87,7 @@ edits `renmori.toml`; it needs Tkinter and a display, see [gui.md](gui.md).
 |------|-----------|---------|-------|
 | `-o, --output DIR` | — | in place | protect a copy in DIR (DIR must not exist); original untouched |
 | `-c, --config FILE` | — | autodetect | else `<game-dir>/renmori.toml` or `./renmori.toml` |
-| `--chunk-size N` | `chunk_size` | 65536 | container chunk size in bytes |
+| `--chunk-size N` | `chunk_size` | 65536 | baseline only: container chunk size in bytes (the plugin picks a per-build chunk size) |
 | `--exclude GLOB` | `exclude` | none | leave matching files unencrypted (repeatable; adds to config) |
 | `--strength S` | `strength` | full | the default is full protection (the plugin is auto-downloaded if absent); `baseline` forces the open format; `auto` is full-when-available, else baseline (see below) |
 | `--plugin PATH` | — | `$RENMORI_PLUGIN` | use this plugin binary instead of the auto-downloaded one |
